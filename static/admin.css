@@ -746,13 +746,67 @@ body {
     flex-wrap: wrap;
 }
 
-.card-badges {
-    position: absolute;
-    top: 12px;
-    right: 12px;
+.manage-card h4 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--gray-800);
+    padding-right: 0;
+}
+
+.manage-card .card-meta-line {
     display: flex;
-    gap: 6px;
     align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.manage-card .card-detail {
+    font-size: 0.85rem;
+    color: var(--gray-500);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.manage-card .card-price {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--green-dark);
+}
+
+.manage-card .card-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+    flex-wrap: wrap;
+}
+
+.card-badge {
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.badge-active {
+    background: var(--success-light);
+    color: var(--success);
+}
+
+.badge-inactive {
+    background: var(--danger-light);
+    color: var(--danger);
+}
+
+.badge-featured {
+    background: var(--warning-light);
+    color: var(--warning);
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
 }
 
 .manage-card .card-badge {
