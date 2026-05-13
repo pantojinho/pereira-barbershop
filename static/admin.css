@@ -51,44 +51,109 @@ body {
 
 #login-screen {
     min-height: 100vh;
+    min-height: 100dvh;
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 20px;
+    padding: 24px;
+    padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px));
     background: var(--green-dark);
-    background-image: radial-gradient(circle at 20% 50%, rgba(255,215,0,0.05) 0%, transparent 50%),
-                      radial-gradient(circle at 80% 50%, rgba(255,215,0,0.05) 0%, transparent 50%);
+    background-image:
+        radial-gradient(ellipse at 20% 40%, rgba(255,215,0,0.08) 0%, transparent 60%),
+        radial-gradient(ellipse at 80% 60%, rgba(255,215,0,0.06) 0%, transparent 60%);
 }
 
 .login-card {
     background: var(--white);
-    border-radius: var(--radius-lg);
-    padding: 48px 40px;
+    border-radius: 16px;
+    padding: 40px 32px 32px;
     width: 100%;
-    max-width: 420px;
-    box-shadow: var(--shadow-lg);
+    max-width: 400px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
     text-align: center;
 }
 
+.login-logo-wrap {
+    width: 96px;
+    height: 96px;
+    margin: 0 auto 20px;
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 4px 16px rgba(45,75,64,0.2);
+    background: var(--cream);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
 .login-logo {
-    width: 80px;
-    height: 80px;
-    margin-bottom: 16px;
+    width: 100%;
+    height: 100%;
     object-fit: contain;
 }
 
-.login-card h1 {
-    font-family: var(--font-body);
-    font-size: 1.25rem;
-    font-weight: 600;
-    color: var(--gray-800);
-    margin-bottom: 4px;
+.login-title {
+    font-family: 'Playfair Display', serif !important;
+    font-size: 1.35rem !important;
+    font-weight: 700 !important;
+    color: var(--green-dark) !important;
+    margin-bottom: 2px !important;
 }
 
 .login-subtitle {
-    font-size: 0.85rem;
+    font-size: 0.8rem;
     color: var(--gray-400);
-    margin-bottom: 32px;
+    margin-bottom: 28px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+
+.form-group label i {
+    margin-right: 4px;
+    opacity: 0.6;
+}
+
+.password-wrap {
+    position: relative;
+}
+
+.password-wrap input {
+    padding-right: 48px;
+}
+
+.toggle-password {
+    position: absolute;
+    right: 4px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: var(--gray-400);
+    cursor: pointer;
+    padding: 10px 12px;
+    font-size: 1rem;
+    transition: color 0.2s;
+    min-width: 44px;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.toggle-password:hover {
+    color: var(--green-dark);
+}
+
+#btn-login {
+    margin-top: 8px;
+    min-height: 50px;
+    font-size: 1rem;
+    letter-spacing: 0.3px;
+}
+
+#btn-login:disabled {
+    opacity: 0.6;
+    cursor: wait;
 }
 
 .form-group {
@@ -113,11 +178,12 @@ body {
     padding: 10px 14px;
     border: 1.5px solid var(--gray-200);
     border-radius: var(--radius);
-    font-size: 0.95rem;
+    font-size: 16px;
     font-family: var(--font-body);
     color: var(--gray-800);
     background: var(--white);
     transition: border-color 0.2s;
+    -webkit-appearance: none;
 }
 
 .form-group input:focus,
@@ -139,11 +205,16 @@ body {
 }
 
 .back-link {
-    display: inline-block;
-    margin-top: 20px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 24px;
     font-size: 0.85rem;
     color: var(--gray-400);
     text-decoration: none;
+    padding: 8px 4px;
+    min-height: 44px;
+    transition: color 0.2s;
 }
 
 .back-link:hover {
@@ -1070,7 +1141,18 @@ body {
     }
 
     .login-card {
-        padding: 32px 24px;
+        padding: 32px 24px 28px;
+    }
+
+    .login-logo-wrap {
+        width: 80px;
+        height: 80px;
+        border-radius: 16px;
+        margin-bottom: 16px;
+    }
+
+    .login-title {
+        font-size: 1.2rem !important;
     }
 
     .modal-card {
@@ -1129,10 +1211,19 @@ body {
     .toast-container {
         left: 12px;
         right: 12px;
-        bottom: 12px;
+        bottom: calc(12px + env(safe-area-inset-bottom, 0px));
     }
 
     .toast {
         max-width: none;
+    }
+
+    .admin-content {
+        padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+    }
+
+    .admin-header {
+        padding-left: calc(12px + env(safe-area-inset-left, 0px));
+        padding-right: calc(12px + env(safe-area-inset-right, 0px));
     }
 }

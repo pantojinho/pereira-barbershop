@@ -104,6 +104,7 @@
         var email = $('login-email').value.trim();
         var password = $('login-password').value;
         var errEl = $('login-error');
+        var btnLogin = $('btn-login');
         errEl.style.display = 'none';
 
         if (!email || !password) {
@@ -111,6 +112,9 @@
             errEl.style.display = 'block';
             return;
         }
+
+        btnLogin.disabled = true;
+        btnLogin.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Entrando...';
 
         try {
             var result = await sb.auth.signInWithPassword({ email: email, password: password });
@@ -120,12 +124,16 @@
                 await sb.auth.signOut();
                 errEl.textContent = 'Seu usuário não tem permissão de administrador.';
                 errEl.style.display = 'block';
+                btnLogin.disabled = false;
+                btnLogin.innerHTML = '<i class="fas fa-sign-in-alt"></i> Entrar';
                 return;
             }
             showAdminPanel(result.data.user);
         } catch (err) {
             errEl.textContent = err.message || 'Email ou senha incorretos.';
             errEl.style.display = 'block';
+            btnLogin.disabled = false;
+            btnLogin.innerHTML = '<i class="fas fa-sign-in-alt"></i> Entrar';
         }
     }
 
@@ -669,6 +677,21 @@
     function init() {
         $('login-form').addEventListener('submit', handleLogin);
         $('btn-logout').addEventListener('click', handleLogout);
+
+        var toggleBtn = $('toggle-password');
+        if (toggleBtn) {
+            toggleBtn.addEventListener('click', function () {
+                var input = $('login-password');
+                var icon = this.querySelector('i');
+                if (input.type === 'password') {
+                    input.type = 'text';
+                    icon.className = 'fas fa-eye-slash';
+                } else {
+                    input.type = 'password';
+                    icon.className = 'fas fa-eye';
+                }
+            });
+        }
 
         qsa('.nav-tab').forEach(function (tab) {
             tab.addEventListener('click', function () {

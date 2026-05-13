@@ -493,15 +493,24 @@
     async function submitBooking() {
         if (!validateStep(4)) return;
 
+        var nextBtn = $("btn-next");
+        var originalHTML = nextBtn.innerHTML;
+        nextBtn.disabled = true;
+        nextBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando...';
+
         var serviceIds = booking.services.map(function (s) { return s.id; });
         try {
             var result = await createBooking(serviceIds);
             if (result.error) {
                 alert('Erro ao salvar agendamento: ' + result.error.message);
+                nextBtn.disabled = false;
+                nextBtn.innerHTML = originalHTML;
                 return;
             }
         } catch (err) {
             alert('Erro de conexão. Tente novamente.');
+            nextBtn.disabled = false;
+            nextBtn.innerHTML = originalHTML;
             return;
         }
 

@@ -403,6 +403,7 @@ body {
 @media (max-width: 768px) {
     body {
         padding: var(--spacing-sm);
+        padding-bottom: calc(var(--spacing-sm) + env(safe-area-inset-bottom, 0px));
         justify-content: flex-start;
         background-attachment: scroll;
     }
@@ -424,18 +425,23 @@ body {
     }
 
     .badges {
-        flex-direction: column;
+        flex-direction: row;
         width: 100%;
+        justify-content: center;
     }
 
     .premium-badge,
     .only-one-badge {
-        width: 100%;
+        flex: 1;
         text-align: center;
+        padding: 10px 16px;
+        font-size: 0.75rem;
     }
 
     .booking-cta {
         width: 100%;
+        min-height: 52px;
+        font-size: 1rem;
     }
 
     .qr-section {
@@ -454,18 +460,29 @@ body {
     }
 
     .contact-item {
-        flex-direction: column;
+        flex-direction: row;
         align-items: center;
-        text-align: center;
+        text-align: left;
     }
 
     .contact-icon {
-        margin-right: 0;
-        margin-bottom: var(--spacing-xs);
+        width: 44px;
+        height: 44px;
+        font-size: 1.1rem;
+        margin-right: var(--spacing-md);
+        margin-bottom: 0;
+    }
+
+    .contact-label {
+        font-size: 0.7rem;
+    }
+
+    .contact-value {
+        font-size: 0.9rem;
     }
 
     .contact-text {
-        width: 100%;
+        width: auto;
     }
 }
 
@@ -502,32 +519,69 @@ body {
         border-radius: var(--radius-lg);
     }
 
+    .business-card::before {
+        display: none;
+    }
+
     .logo-original {
-        max-width: 220px;
+        max-width: 200px;
+    }
+
+    .slogan {
+        font-size: 0.85rem;
+    }
+
+    .badges {
+        flex-direction: column;
+    }
+
+    .premium-badge,
+    .only-one-badge {
+        padding: 8px 16px;
+        font-size: 0.7rem;
     }
 
     .qr-code {
-        width: 140px;
-        height: 140px;
+        width: 130px;
+        height: 130px;
     }
 
     .scan-title {
         font-size: 1rem;
     }
 
+    .scan-text {
+        font-size: 0.85rem;
+    }
+
     .contact-item {
-        flex-direction: column;
-        align-items: center;
-        text-align: center;
+        padding-bottom: var(--spacing-sm);
+        margin-bottom: var(--spacing-sm);
     }
 
     .contact-icon {
-        margin-right: 0;
-        margin-bottom: var(--spacing-xs);
+        width: 40px;
+        height: 40px;
+        font-size: 1rem;
     }
 
-    .contact-text {
-        width: 100%;
+    .contact-value {
+        font-size: 0.85rem;
+    }
+
+    .footer {
+        margin-top: var(--spacing-md);
+        padding-bottom: env(safe-area-inset-bottom, 0px);
+    }
+
+    .admin-link {
+        top: 8px;
+        right: 8px;
+        padding: 10px;
+        border-radius: 50%;
+        min-width: 44px;
+        min-height: 44px;
+        justify-content: center;
     }
 }
 

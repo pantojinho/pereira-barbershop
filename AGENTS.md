@@ -263,6 +263,55 @@ Quando editar HTML/CSS/logo, faca em **AMBOS** os lugares:
 
 ---
 
+### Sessao 5 — 13/05/2026
+**Agente:** opencode (glm-5.1)
+**Tarefas realizadas:**
+- Analise geral do projeto completo (todos os arquivos HTML/CSS/JS)
+- **Tela de Login (admin.html/css/js) — redesign completo:**
+  - Logo agora em container com fundo creme e bordas arredondadas (96x96px)
+  - Titulo usa Playfair Display (identidade visual da barbearia)
+  - Labels com icones (envelope e cadeado)
+  - Botao mostrar/esconder senha (toggle eye icon)
+  - Loading state no botao "Entrar" (spinner + texto "Entrando...")
+  - Autocomplete nos campos (email + current-password)
+  - Botao "Entrar" com icone e min-height 50px
+  - Link "Voltar ao site" com icone e touch target 44px
+- **Pagina de Agendamento — melhorias UX mobile:**
+  - Corrigido "Sab" para "Sáb" nos dias da semana do calendario
+  - Touch targets dos dias do calendario aumentados para 40x40px minimo
+  - Time slots com min-height 44px e display flex centralizado
+  - Font-size dos inputs corrigido para 16px (evita zoom no iOS)
+  - Loading state no botao de confirmar agendamento (spinner + "Enviando...")
+  - Safe-area padding para telas com notch (env(safe-area-inset-bottom))
+  - Background gradient do booking-nav melhorado (80% opacidade)
+  - Stepper com min-width para evitar encolhimento
+  - -webkit-tap-highlight-color: transparent no body
+- **Painel Admin — melhorias UX mobile:**
+  - Font-size dos inputs para 16px (evita zoom no iOS)
+  - Safe-area padding no toast container e admin-content
+  - Safe-area no admin-header (left/right)
+  - Login card ajustado para mobile (padding, logo, titulo)
+- **Landing Page — nao alterada** (conforme solicitacao do usuario)
+- Sincronizou todos os arquivos com pasta `static/`
+
+**Arquivos modificados:**
+- `admin.html` — HTML do login redesenhado (logo container, toggle senha, icones)
+- `admin.css` — Estilos do login redesenhados + safe-area + responsive
+- `admin.js` — Toggle de senha + loading state no login
+- `agendar.html` — "Sab" → "Sáb"
+- `agendar.css` — Touch targets, font-size 16px, safe-area, booking-nav
+- `agendar.js` — Loading state no botao confirmar
+- `style.css` — Nao alterado nesta sessao (landing page mantida)
+- Todos os arquivos sincronizados em `static/`
+
+**Pendencias:**
+- Implementar notificacoes WhatsApp (Evolution API ou Z-API)
+- Chatbot WhatsApp para agendamento
+- Relatorios (faturamento, clientes recorrentes)
+- Sistema de avaliacao
+
+---
+
 ### Plano do Sistema Completo (Roadmap)
 
 #### Fase 1 — Concluida

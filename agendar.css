@@ -35,8 +35,9 @@ body {
     flex-direction: column;
     align-items: center;
     line-height: 1.6;
-    padding-bottom: 92px;
+    padding-bottom: calc(92px + env(safe-area-inset-bottom, 0px));
     -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
 }
 
 .booking-header {
@@ -111,6 +112,7 @@ body {
     font-weight: 700;
     font-size: 0.9rem;
     transition: all var(--transition);
+    min-width: 36px;
 }
 
 .step.active .step-number {
@@ -329,6 +331,8 @@ body {
     transition: all var(--transition);
     border: none;
     background: none;
+    min-height: 40px;
+    min-width: 40px;
 }
 
 .calendar-days .day:hover:not(.disabled):not(.empty) {
@@ -390,6 +394,10 @@ body {
     cursor: pointer;
     transition: all var(--transition);
     background: white;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .time-slot:hover:not(.disabled) {
@@ -566,10 +574,11 @@ body {
     padding: 14px 16px;
     border: 2px solid #e0e0e0;
     border-radius: var(--radius-md);
-    font-size: 1rem;
+    font-size: 16px;
     font-family: 'Inter', sans-serif;
     transition: border-color var(--transition);
     outline: none;
+    -webkit-appearance: none;
 }
 
 .form-group input:focus {
@@ -723,8 +732,9 @@ body {
     display: flex;
     justify-content: space-between;
     padding: 16px;
-    background: linear-gradient(to top, #EBE5D7 60%, transparent);
+    background: linear-gradient(to top, #EBE5D7 80%, transparent);
     z-index: 20;
+    padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
 }
 
 .btn-back,
@@ -815,6 +825,10 @@ body {
 }
 
 @media (max-width: 480px) {
+    body {
+        background-attachment: scroll;
+    }
+
     .booking-header {
         padding-top: 12px;
     }
@@ -886,11 +900,15 @@ body {
 
     .calendar-days .day {
         border-radius: var(--radius-sm);
-        min-height: 36px;
+        min-height: 40px;
+        min-width: 40px;
+        font-size: 0.85rem;
     }
 
     .time-slot {
-        min-height: 42px;
+        min-height: 44px;
+        font-size: 0.85rem;
+        padding: 8px 4px;
     }
 
     .service-option {
@@ -907,7 +925,7 @@ body {
 
     .services-summary {
         position: sticky;
-        bottom: 74px;
+        bottom: 80px;
         z-index: 10;
     }
 
@@ -922,11 +940,38 @@ body {
         justify-content: center;
         padding: 12px 14px;
         font-size: 0.9rem;
-        min-height: 46px;
+        min-height: 48px;
     }
 
     .confirm-actions {
         display: grid;
         grid-template-columns: 1fr;
+    }
+
+    .confirmation-box {
+        padding: 24px 12px;
+    }
+
+    .confirmation-box h2 {
+        font-size: 1.4rem;
+    }
+
+    .confirm-details {
+        padding: 14px;
+    }
+
+    .booking-summary {
+        padding: 14px;
+    }
+
+    .form-group input {
+        padding: 14px;
+        font-size: 16px;
+    }
+
+    .btn-whatsapp,
+    .btn-secondary {
+        justify-content: center;
+        min-height: 48px;
     }
 }
