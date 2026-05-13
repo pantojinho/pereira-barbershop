@@ -304,20 +304,10 @@
             var barberName = a.barber ? a.barber.name : 'Barbeiro';
             var services = (a.service_names || []).join(', ');
             var dateLabel = isSimple ? '' : '<span>' + formatDate(a.appointment_date) + '</span>';
+            var phoneLabel = isSimple ? '' : '<span>&#128222; ' + formatPhone(a.client_phone) + '</span>';
             var obsHtml = a.obs ? '<span class="appointment-obs">&#9993; ' + escapeHTML(a.obs) + '</span>' : '';
 
-            var actions = '';
-            if (!isSimple) {
-                if (a.status === 'confirmed' || a.status === 'pending') {
-                    actions += '<button class="btn-icon success" onclick="AdminApp.completeAppointment(\'' + jsString(a.id) + '\')" title="Concluir">&#10003;</button>';
-                    actions += '<button class="btn-icon danger" onclick="AdminApp.cancelAppointment(\'' + jsString(a.id) + '\')" title="Cancelar">&#10007;</button>';
-                }
-                if (a.status === 'confirmed') {
-                    actions += '<button class="btn-icon" onclick="AdminApp.openWhatsApp(\'' + jsString(a.client_phone) + '\', \'' + jsString(a.client_name) + '\')" title="WhatsApp">&#128172;</button>';
-                }
-            }
-
-            return '<div class="appointment-card">' +
+            return '<div class="appointment-card" onclick="AdminApp.showAppointmentDetails(\'' + jsString(a.id) + '\')">' +
                 '<div class="appointment-info">' +
                     '<div class="appointment-time-badge">' + formatTime(a.appointment_time) + '</div>' +
                     '<div class="appointment-details">' +
@@ -326,13 +316,13 @@
                             '<span>&#9998; ' + escapeHTML(barberName) + '</span>' +
                             '<span>' + escapeHTML(services) + '</span>' +
                             dateLabel +
+                            phoneLabel +
                         '</div>' +
                         obsHtml +
                     '</div>' +
                 '</div>' +
                 '<div class="appointment-actions">' +
                     '<span class="status-badge ' + statusClass + '">' + escapeHTML(statusLabel) + '</span>' +
-                    actions +
                 '</div>' +
             '</div>';
         }).join('');
@@ -362,27 +352,20 @@
         container.innerHTML = html;
     }
 
-    async function cancelAppointment(id) {
-        showConfirm('Cancelar Agendamento', 'Tem certeza que deseja cancelar este agendamento?', async function () {
-            var result = await sb.from('appointments').update({ status: 'cancelled' }).eq('id', id);
+    async function completeAppointment(id) {
+        try {
+            var result = await sb.from('appointments').update({ status: 'completed' }).eq('id', id);
             if (result.error) {
-                toast('Erro ao cancelar: ' + result.error.message, 'error');
+                toast('Erro: ' + result.error.message, 'error');
             } else {
-                toast('Agendamento cancelado.', 'success');
+                toast('Agendamento concluído!', 'success');
+                closeAppointmentDetails();
                 loadDashboard();
                 loadAppointments(currentPage);
             }
-        });
-    }
-
-    async function completeAppointment(id) {
-        var result = await sb.from('appointments').update({ status: 'completed' }).eq('id', id);
-        if (result.error) {
-            toast('Erro: ' + result.error.message, 'error');
-        } else {
-            toast('Agendamento concluído.', 'success');
-            loadDashboard();
-            loadAppointments(currentPage);
+        } catch (err) {
+            console.error(err);
+            toast('Erro ao concluir agendamento.', 'error');
         }
     }
 
@@ -391,6 +374,188 @@
         if (!clean.startsWith('55')) clean = '55' + clean;
         var text = 'Olá! Sou da Pereira\'s Barber Shop.';
         window.open('https://wa.me/' + clean + '?text=' + encodeURIComponent(text), '_blank');
+    }
+
+    async function showAppointmentDetails(id) {
+        try {
+            var result = await sb.from('appointments').select('*, barber:barbers(name)').eq('id', id).single();
+            if (!result.data) {
+                toast('Agendamento não encontrado.', 'error');
+                return;
+            }
+
+            var a = result.data;
+            var statusLabel = { confirmed: 'Confirmado', pending: 'Pendente', cancelled: 'Cancelado', completed: 'Concluído' }[a.status] || a.status;
+            var statusClass = 'status-' + a.status;
+
+            var services = (a.service_names || []).join(', ');
+            var barberName = a.barber ? a.barber.name : 'Barbeiro';
+            var phone = formatPhone(a.client_phone);
+            var date = formatDate(a.appointment_date);
+            var time = formatTime(a.appointment_time);
+            var obs = a.obs || 'Nenhuma';
+
+            var whatsappLink = getWhatsAppLink(a.client_phone, a.client_name);
+            var cancelWhatsappLink = getWhatsAppCancelLink(a);
+
+            var bodyHTML = '<div class="appointment-status-badge-large ' + statusClass + '">' + escapeHTML(statusLabel) + '</div>' +
+                '<div class="appointment-detail-item">' +
+                    '<div class="appointment-detail-label">Cliente</div>' +
+                    '<div class="appointment-detail-value highlight">' + escapeHTML(a.client_name) + '</div>' +
+                '</div>' +
+                '<div class="appointment-detail-item">' +
+                    '<div class="appointment-detail-label">Telefone</div>' +
+                    '<div class="appointment-detail-value">' + escapeHTML(phone) + '</div>' +
+                    '<a href="' + whatsappLink + '" class="appointment-detail-whatsapp-link" target="_blank"><i class="fab fa-whatsapp"></i> WhatsApp</a>' +
+                '</div>' +
+                '<div class="appointment-detail-item">' +
+                    '<div class="appointment-detail-label">Barbeiro</div>' +
+                    '<div class="appointment-detail-value">' + escapeHTML(barberName) + '</div>' +
+                '</div>' +
+                '<div class="appointment-detail-item">' +
+                    '<div class="appointment-detail-label">Serviço(s)</div>' +
+                    '<div class="appointment-detail-value">' + escapeHTML(services) + '</div>' +
+                '</div>' +
+                '<div class="appointment-detail-item">' +
+                    '<div class="appointment-detail-label">Data</div>' +
+                    '<div class="appointment-detail-value">' + date + '</div>' +
+                '</div>' +
+                '<div class="appointment-detail-item">' +
+                    '<div class="appointment-detail-label">Horário</div>' +
+                    '<div class="appointment-detail-value highlight">' + time + '</div>' +
+                '</div>' +
+                '<div class="appointment-detail-item">' +
+                    '<div class="appointment-detail-label">Total</div>' +
+                    '<div class="appointment-detail-value highlight">' + formatCurrency(a.total_price || 0) + '</div>' +
+                '</div>' +
+                '<div class="appointment-detail-item">' +
+                    '<div class="appointment-detail-label">Observações</div>' +
+                    '<div class="appointment-detail-value">' + escapeHTML(obs) + '</div>' +
+                '</div>';
+
+            $('appointment-details-body').innerHTML = bodyHTML;
+
+            var footerHTML = '';
+            if (a.status === 'pending') {
+                footerHTML += '<button onclick="AdminApp.confirmAppointment(\'' + jsString(a.id) + '\')" class="btn-primary">Confirmar</button>';
+            }
+            if (a.status === 'confirmed' || a.status === 'pending') {
+                footerHTML += '<button onclick="AdminApp.completeAppointment(\'' + jsString(a.id) + '\')" class="btn-primary">Concluir</button>';
+                footerHTML += '<button onclick="AdminApp.cancelAppointmentFromDetails(\'' + jsString(a.id) + '\')" class="btn-outline btn-danger">Cancelar</button>';
+            }
+            if (a.status === 'cancelled' || a.status === 'completed') {
+                footerHTML += '<button onclick="AdminApp.deleteAppointment(\'' + jsString(a.id) + '\')" class="btn-outline btn-danger">Remover do Histórico</button>';
+            }
+            footerHTML += '<button onclick="AdminApp.closeAppointmentDetails()" class="btn-outline">Fechar</button>';
+
+            $('appointment-details-footer').innerHTML = '<div class="appointment-detail-actions">' + footerHTML + '</div>';
+
+            $('appointment-details-overlay').style.display = 'flex';
+
+            window.currentAppointmentId = id;
+        } catch (err) {
+            console.error(err);
+            toast('Erro ao carregar detalhes do agendamento.', 'error');
+        }
+    }
+
+    function closeAppointmentDetails() {
+        $('appointment-details-overlay').style.display = 'none';
+        window.currentAppointmentId = null;
+    }
+
+    function getWhatsAppLink(phone, name) {
+        var clean = phone.replace(/\D/g, '');
+        if (!clean.startsWith('55')) clean = '55' + clean;
+        var text = 'Olá, ' + escapeHTML(name) + '! Sou da Pereira\'s Barber Shop.';
+        return 'https://wa.me/' + clean + '?text=' + encodeURIComponent(text);
+    }
+
+    function getWhatsAppCancelLink(appointment) {
+        var clean = appointment.client_phone.replace(/\D/g, '');
+        if (!clean.startsWith('55')) clean = '55' + clean;
+        var text = 'Olá, ' + escapeHTML(appointment.client_name) + '! Infelizmente precisamos cancelar seu agendamento de ' + escapeHTML((appointment.service_names || []).join(', ')) + ' em ' + formatDate(appointment.appointment_date) + ' às ' + formatTime(appointment.appointment_time) + ' com ' + escapeHTML(appointment.barber ? appointment.barber.name : 'Barbeiro') + '. Pedimos desculpas pelo inconveniente. Para reagendar, acesse: https://pereira-barbershop.vercel.app/agendar.html';
+        return 'https://wa.me/' + clean + '?text=' + encodeURIComponent(text);
+    }
+
+    async function confirmAppointment(id) {
+        try {
+            var result = await sb.from('appointments').update({ status: 'confirmed' }).eq('id', id);
+            if (result.error) {
+                toast('Erro: ' + result.error.message, 'error');
+            } else {
+                toast('Agendamento confirmado!', 'success');
+                closeAppointmentDetails();
+                loadDashboard();
+                loadAppointments(currentPage);
+            }
+        } catch (err) {
+            console.error(err);
+            toast('Erro ao confirmar agendamento.', 'error');
+        }
+    }
+
+    async function cancelAppointmentFromDetails(id) {
+        try {
+            var result = await sb.from('appointments').select('*, barber:barbers(name)').eq('id', id).single();
+            if (!result.data) {
+                toast('Agendamento não encontrado.', 'error');
+                return;
+            }
+
+            var cancelLink = getWhatsAppCancelLink(result.data);
+
+            $('appointment-details-body').innerHTML += '<div style="margin-top: 16px; padding: 12px; background: var(--danger-light); border-radius: 6px; border-left: 4px solid var(--danger);">' +
+                '<div style="font-weight: 600; color: var(--danger); margin-bottom: 8px;">&#9888; Notifique o cliente no WhatsApp</div>' +
+                '<div style="font-size: 0.85rem; color: var(--gray-600); margin-bottom: 12px;">Antes de confirmar o cancelamento, notifique o cliente clicando no link abaixo:</div>' +
+                '<a href="' + cancelLink + '" class="appointment-detail-cancel-link" target="_blank"><i class="fab fa-whatsapp"></i> Notificar Cliente (WhatsApp)</a>' +
+                '<div style="margin-top: 12px; font-size: 0.8rem; color: var(--gray-500);">Após notificar, clique em "Confirmar Cancelamento" abaixo.</div>' +
+            '</div>';
+
+            var footerHTML = '<button onclick="AdminApp.confirmCancel(\'' + jsString(id) + '\')" class="btn-primary btn-danger">Confirmar Cancelamento</button>' +
+                '<button onclick="AdminApp.showAppointmentDetails(\'' + jsString(id) + '\')" class="btn-outline">Voltar</button>';
+            $('appointment-details-footer').innerHTML = '<div class="appointment-detail-actions">' + footerHTML + '</div>';
+
+        } catch (err) {
+            console.error(err);
+            toast('Erro ao preparar cancelamento.', 'error');
+        }
+    }
+
+    async function confirmCancel(id) {
+        try {
+            var result = await sb.from('appointments').update({ status: 'cancelled' }).eq('id', id);
+            if (result.error) {
+                toast('Erro ao cancelar: ' + result.error.message, 'error');
+            } else {
+                toast('Agendamento cancelado com sucesso!', 'success');
+                closeAppointmentDetails();
+                loadDashboard();
+                loadAppointments(currentPage);
+            }
+        } catch (err) {
+            console.error(err);
+            toast('Erro ao cancelar agendamento.', 'error');
+        }
+    }
+
+    async function deleteAppointment(id) {
+        showConfirm('Remover Agendamento', 'Tem certeza que deseja remover este agendamento do histórico? Esta ação não pode ser desfeita.', async function () {
+            try {
+                var result = await sb.from('appointments').delete().eq('id', id);
+                if (result.error) {
+                    toast('Erro ao remover: ' + result.error.message, 'error');
+                } else {
+                    toast('Agendamento removido do histórico.', 'success');
+                    closeAppointmentDetails();
+                    loadDashboard();
+                    loadAppointments(currentPage);
+                }
+            } catch (err) {
+                console.error(err);
+                toast('Erro ao remover agendamento.', 'error');
+            }
+        });
     }
 
     // ========== BARBERS CRUD ==========
@@ -932,6 +1097,11 @@ showModal(title, html, async function () {
             if (e.target === this) hideConfirm();
         });
 
+        $('appointment-details-close').addEventListener('click', closeAppointmentDetails);
+        $('appointment-details-overlay').addEventListener('click', function (e) {
+            if (e.target === this) closeAppointmentDetails();
+        });
+
         $('btn-add-barber').addEventListener('click', function () { showBarberForm(null); });
         $('btn-add-service').addEventListener('click', function () { showServiceForm(null); });
         $('btn-add-admin').addEventListener('click', showAddAdminForm);
@@ -951,7 +1121,12 @@ showModal(title, html, async function () {
     }
 
     window.AdminApp = {
-        cancelAppointment: cancelAppointment,
+        showAppointmentDetails: showAppointmentDetails,
+        closeAppointmentDetails: closeAppointmentDetails,
+        confirmAppointment: confirmAppointment,
+        cancelAppointmentFromDetails: cancelAppointmentFromDetails,
+        confirmCancel: confirmCancel,
+        deleteAppointment: deleteAppointment,
         completeAppointment: completeAppointment,
         openWhatsApp: openWhatsApp,
         editBarber: editBarber,
