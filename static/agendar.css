@@ -747,6 +747,27 @@ body {
     transform: translateY(-2px);
 }
 
+.btn-outline-product {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 24px;
+    background: transparent;
+    color: var(--green-primary);
+    text-decoration: none;
+    border-radius: 30px;
+    font-weight: 700;
+    font-size: 0.95rem;
+    border: 2px solid var(--green-primary);
+    transition: all var(--transition);
+}
+
+.btn-outline-product:hover {
+    background-color: var(--green-primary);
+    color: white;
+    transform: translateY(-2px);
+}
+
 /* NAVIGATION BUTTONS */
 .booking-nav {
     position: fixed;
@@ -1000,7 +1021,8 @@ body {
     }
 
     .btn-whatsapp,
-    .btn-secondary {
+    .btn-secondary,
+    .btn-outline-product {
         justify-content: center;
         min-height: 48px;
     }

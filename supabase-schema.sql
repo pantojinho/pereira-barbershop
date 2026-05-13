@@ -62,10 +62,38 @@ CREATE TABLE IF NOT EXISTS holidays (
     created_at TIMESTAMPTZ DEFAULT now()
 );
 
--- 6. INDICES
+-- 6. TABELA DE PRODUTOS
+CREATE TABLE IF NOT EXISTS products (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    name TEXT NOT NULL,
+    description TEXT,
+    price NUMERIC(10,2) NOT NULL,
+    photo_url TEXT,
+    active BOOLEAN NOT NULL DEFAULT true,
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- 7. TABELA DE PEDIDOS/RESERVAS DE PRODUTOS
+CREATE TABLE IF NOT EXISTS product_orders (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    product_ids UUID[] NOT NULL,
+    product_names TEXT[] NOT NULL,
+    product_prices NUMERIC(10,2)[] NOT NULL,
+    quantities INTEGER[] NOT NULL,
+    client_name TEXT NOT NULL,
+    client_phone TEXT NOT NULL,
+    total_price NUMERIC(10,2) NOT NULL DEFAULT 0,
+    status TEXT NOT NULL DEFAULT 'reserved' CHECK (status IN ('reserved', 'picked_up', 'cancelled')),
+    created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- 8. INDICES
 CREATE INDEX IF NOT EXISTS idx_appointments_date_barber ON appointments(appointment_date, barber_id);
 CREATE INDEX IF NOT EXISTS idx_appointments_status ON appointments(status);
 CREATE INDEX IF NOT EXISTS idx_barber_schedules_barber ON barber_schedules(barber_id);
+CREATE INDEX IF NOT EXISTS idx_products_active ON products(active, sort_order);
+CREATE INDEX IF NOT EXISTS idx_product_orders_status ON product_orders(status);
 
 -- ============================================
 -- ROW LEVEL SECURITY (basico)
@@ -77,6 +105,8 @@ ALTER TABLE barber_schedules ENABLE ROW LEVEL SECURITY;
 ALTER TABLE services ENABLE ROW LEVEL SECURITY;
 ALTER TABLE appointments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE holidays ENABLE ROW LEVEL SECURITY;
+ALTER TABLE products ENABLE ROW LEVEL SECURITY;
+ALTER TABLE product_orders ENABLE ROW LEVEL SECURITY;
 
 -- BARBEIROS
 DROP POLICY IF EXISTS "Public can read active barbers" ON barbers;
@@ -131,8 +161,23 @@ DROP POLICY IF EXISTS "Authenticated users can manage holidays" ON holidays;
 CREATE POLICY "Authenticated users can manage holidays" ON holidays
     FOR ALL USING (auth.role() = 'authenticated');
 
--- ============================================
--- SEED: DADOS INICIAIS
+-- PRODUTOS
+DROP POLICY IF EXISTS "Public can read active products" ON products;
+CREATE POLICY "Public can read active products" ON products
+    FOR SELECT USING (active = true);
+
+DROP POLICY IF EXISTS "Authenticated users can manage products" ON products;
+CREATE POLICY "Authenticated users can manage products" ON products
+    FOR ALL USING (auth.role() = 'authenticated');
+
+-- PEDIDOS DE PRODUTOS
+DROP POLICY IF EXISTS "Public can create product orders" ON product_orders;
+CREATE POLICY "Public can create product orders" ON product_orders
+    FOR INSERT WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Authenticated users can manage product orders" ON product_orders;
+CREATE POLICY "Authenticated users can manage product orders" ON product_orders
+    FOR ALL USING (auth.role() = 'authenticated');
 -- ============================================
 
 INSERT INTO barbers (name, active, sort_order, works_holidays)
@@ -186,3 +231,27 @@ CREATE POLICY "Authenticated can update barber photos" ON storage.objects
 DROP POLICY IF EXISTS "Authenticated can delete barber photos" ON storage.objects;
 CREATE POLICY "Authenticated can delete barber photos" ON storage.objects
     FOR DELETE USING (bucket_id = 'barber-photos' AND auth.role() = 'authenticated');
+
+-- ============================================
+-- STORAGE: Bucket para fotos dos produtos
+-- ============================================
+
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('product-photos', 'product-photos', true)
+ON CONFLICT (id) DO NOTHING;
+
+DROP POLICY IF EXISTS "Public can view product photos" ON storage.objects;
+CREATE POLICY "Public can view product photos" ON storage.objects
+    FOR SELECT USING (bucket_id = 'product-photos');
+
+DROP POLICY IF EXISTS "Authenticated can upload product photos" ON storage.objects;
+CREATE POLICY "Authenticated can upload product photos" ON storage.objects
+    FOR INSERT WITH CHECK (bucket_id = 'product-photos' AND auth.role() = 'authenticated');
+
+DROP POLICY IF EXISTS "Authenticated can update product photos" ON storage.objects;
+CREATE POLICY "Authenticated can update product photos" ON storage.objects
+    FOR UPDATE USING (bucket_id = 'product-photos' AND auth.role() = 'authenticated');
+
+DROP POLICY IF EXISTS "Authenticated can delete product photos" ON storage.objects;
+CREATE POLICY "Authenticated can delete product photos" ON storage.objects
+    FOR DELETE USING (bucket_id = 'product-photos' AND auth.role() = 'authenticated');

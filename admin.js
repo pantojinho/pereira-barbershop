@@ -183,6 +183,8 @@
         loadDashboard();
         loadBarbers();
         loadServices();
+        loadProducts();
+        loadProductOrders();
         loadAdmins();
         loadAppointments();
     }
@@ -1338,6 +1340,278 @@
         });
     }
 
+    // ========== PRODUCTS CRUD (produtos da lojinha) ==========
+
+    async function loadProducts() {
+        try {
+            var result = await sb.from('products').select('*').order('sort_order').order('name');
+            renderProducts(result.data || []);
+        } catch (err) {
+            $('products-list').innerHTML = '<p class="empty-state">Erro ao carregar produtos.</p>';
+        }
+    }
+
+    function renderProducts(products) {
+        var container = $('products-list');
+        if (!products.length) {
+            container.innerHTML = '<p class="empty-state">Nenhum produto cadastrado.</p>';
+            return;
+        }
+        container.innerHTML = products.map(function (p) {
+            var badgeClass = p.active ? 'badge-active' : 'badge-inactive';
+            var badgeText = p.active ? 'Ativo' : 'Inativo';
+            var photoHtml = p.photo_url
+                ? '<div class="card-barber-photo"><img src="' + escapeHTML(p.photo_url) + '" alt="' + escapeHTML(p.name) + '"></div>'
+                : '<div class="card-barber-photo card-barber-photo-placeholder"><i class="fas fa-box"></i></div>';
+            return '<div class="manage-card ' + (p.active ? '' : 'inactive') + '">' +
+                '<span class="card-badge ' + badgeClass + '">' + badgeText + '</span>' +
+                photoHtml +
+                '<h4>' + escapeHTML(p.name) + '</h4>' +
+                (p.description ? '<div class="card-detail" style="font-size:0.8rem">' + escapeHTML(p.description) + '</div>' : '') +
+                '<div class="card-meta-line">' +
+                    '<span class="card-price">' + formatCurrency(p.price) + '</span>' +
+                '</div>' +
+                '<div class="card-actions">' +
+                    '<button class="btn-outline btn-sm" onclick="AdminApp.editProduct(\'' + jsString(p.id) + '\')">Editar</button>' +
+                    '<button class="btn-outline btn-sm" onclick="AdminApp.toggleProduct(\'' + jsString(p.id) + '\', ' + !p.active + ')">' + (p.active ? 'Desativar' : 'Ativar') + '</button>' +
+                    '<button class="btn-outline btn-sm btn-danger" onclick="AdminApp.deleteProduct(\'' + jsString(p.id) + '\')">Excluir</button>' +
+                '</div>' +
+            '</div>';
+        }).join('');
+    }
+
+    function showProductForm(product) {
+        var isEdit = !!product;
+        var title = isEdit ? 'Editar Produto' : 'Novo Produto';
+        var name = isEdit ? product.name : '';
+        var desc = isEdit ? (product.description || '') : '';
+        var price = isEdit ? product.price : '';
+
+        var html = '<div class="form-group"><label>Nome</label><input type="text" id="field-name" value="' + escapeHTML(name) + '" required></div>' +
+            '<div class="form-group"><label>Descrição</label><textarea id="field-desc" rows="2" placeholder="Descrição do produto (opcional)">' + escapeHTML(desc) + '</textarea></div>' +
+            '<div class="form-group"><label>Preço (R$)</label><input type="number" id="field-price" value="' + price + '" step="0.01" min="0" required></div>' +
+            '<div class="form-group"><label><i class="fas fa-camera"></i> Foto do Produto</label>' +
+                '<div class="barber-photo-upload-area">' +
+                    '<div class="barber-photo-preview" id="product-photo-preview"><i class="fas fa-box"></i></div>' +
+                    '<input type="file" id="field-product-photo" accept="image/*" style="display:none">' +
+                    '<input type="hidden" id="field-photo-remove" value="false">' +
+                    '<div class="barber-photo-actions">' +
+                        '<button type="button" class="btn-outline btn-sm" id="btn-choose-product-photo"><i class="fas fa-camera"></i> Escolher Foto</button>' +
+                        '<button type="button" class="btn-outline btn-sm btn-danger" id="btn-remove-product-photo" style="display:none"><i class="fas fa-trash"></i> Remover</button>' +
+                    '</div>' +
+                    '<div class="barber-photo-hint">JPG ou PNG, maximo 2MB</div>' +
+                '</div>' +
+            '</div>';
+
+        showModal(title, html, async function () {
+            var newName = $('field-name').value.trim();
+            var newDesc = $('field-desc').value.trim();
+            var newPrice = parseFloat($('field-price').value);
+
+            if (!newName || isNaN(newPrice)) {
+                toast('Preencha nome e preço.', 'error');
+                return;
+            }
+
+            var data = { name: newName, description: newDesc || null, price: newPrice };
+
+            var photoFile = $('field-product-photo') && $('field-product-photo').files && $('field-product-photo').files[0] ? $('field-product-photo').files[0] : null;
+            var shouldRemovePhoto = $('field-photo-remove') && $('field-photo-remove').value === 'true';
+
+            if (shouldRemovePhoto) data.photo_url = null;
+
+            var result;
+            var savedId = isEdit ? product.id : null;
+
+            if (isEdit) {
+                result = await sb.from('products').update(data).eq('id', product.id);
+            } else {
+                var maxResult = await sb.from('products').select('sort_order').order('sort_order', { ascending: false }).limit(1);
+                data.sort_order = (maxResult.data && maxResult.data.length) ? (maxResult.data[0].sort_order + 1) : 1;
+                data.active = true;
+                result = await sb.from('products').insert(data).select();
+                if (!result.error && result.data && result.data.length) {
+                    savedId = result.data[0].id;
+                }
+            }
+
+            if (!result.error && photoFile && savedId) {
+                var photoPath = savedId + '/photo';
+                var uploadResult = await sb.storage.from('product-photos').upload(photoPath, photoFile, { upsert: true });
+                if (!uploadResult.error) {
+                    var urlData = sb.storage.from('product-photos').getPublicUrl(photoPath);
+                    await sb.from('products').update({ photo_url: urlData.data.publicUrl }).eq('id', savedId);
+                }
+            }
+
+            if (shouldRemovePhoto && isEdit && product.photo_url) {
+                try {
+                    await sb.storage.from('product-photos').remove([product.id + '/photo']);
+                } catch (e) {}
+            }
+
+            if (result.error) {
+                toast('Erro: ' + result.error.message, 'error');
+            } else {
+                hideModal();
+                toast(isEdit ? 'Produto atualizado!' : 'Produto adicionado!', 'success');
+                loadProducts();
+            }
+        }, function () {
+            var photoPreview = $('product-photo-preview');
+            var photoInput = $('field-product-photo');
+            var btnChoose = $('btn-choose-product-photo');
+            var btnRemove = $('btn-remove-product-photo');
+
+            if (isEdit && product && product.photo_url) {
+                photoPreview.innerHTML = '<img src="' + escapeHTML(product.photo_url) + '" alt="Foto">';
+                btnRemove.style.display = 'inline-flex';
+            }
+
+            btnChoose.addEventListener('click', function () { photoInput.click(); });
+
+            photoInput.addEventListener('change', function () {
+                var file = this.files[0];
+                if (!file) return;
+                if (file.size > 2 * 1024 * 1024) {
+                    toast('Foto muito grande. Use imagens ate 2MB.', 'error');
+                    this.value = '';
+                    return;
+                }
+                var reader = new FileReader();
+                reader.onload = function (e) {
+                    photoPreview.innerHTML = '<img src="' + e.target.result + '" alt="Preview">';
+                };
+                reader.readAsDataURL(file);
+                btnRemove.style.display = 'inline-flex';
+                $('field-photo-remove').value = 'false';
+            });
+
+            btnRemove.addEventListener('click', function () {
+                photoPreview.innerHTML = '<i class="fas fa-box"></i>';
+                photoInput.value = '';
+                if (isEdit && product && product.photo_url) {
+                    $('field-photo-remove').value = 'true';
+                }
+                btnRemove.style.display = 'none';
+            });
+        });
+    }
+
+    async function editProduct(id) {
+        var result = await sb.from('products').select('*').eq('id', id).single();
+        if (result.data) showProductForm(result.data);
+    }
+
+    async function toggleProduct(id, active) {
+        var result = await sb.from('products').update({ active: active }).eq('id', id);
+        if (result.error) {
+            toast('Erro: ' + result.error.message, 'error');
+        } else {
+            toast(active ? 'Produto ativado!' : 'Produto desativado.', 'success');
+            loadProducts();
+        }
+    }
+
+    function deleteProduct(id) {
+        showConfirm('Excluir Produto', 'Tem certeza que deseja excluir este produto?', async function () {
+            var result = await sb.from('products').delete().eq('id', id);
+            if (result.error) {
+                toast('Erro: ' + result.error.message, 'error');
+            } else {
+                toast('Produto excluído.', 'success');
+                loadProducts();
+            }
+        });
+    }
+
+    // ========== PRODUCT ORDERS (pedidos/reservas de produtos) ==========
+
+    async function loadProductOrders() {
+        try {
+            var query = sb.from('product_orders').select('*').order('created_at', { ascending: false });
+            var filterStatus = $('filter-order-status').value;
+            if (filterStatus) query = query.eq('status', filterStatus);
+            var result = await query;
+            renderProductOrders(result.data || []);
+        } catch (err) {
+            $('product-orders-list').innerHTML = '<p class="empty-state">Erro ao carregar pedidos.</p>';
+        }
+    }
+
+    function renderProductOrders(orders) {
+        var container = $('product-orders-list');
+        if (!orders.length) {
+            container.innerHTML = '<p class="empty-state">Nenhum pedido encontrado.</p>';
+            return;
+        }
+        container.innerHTML = orders.map(function (o) {
+            var statusClass = 'status-' + o.status;
+            var statusLabel = { reserved: 'Reservado', picked_up: 'Retirado', cancelled: 'Cancelado' }[o.status] || o.status;
+            var items = '';
+            for (var i = 0; i < (o.product_names || []).length; i++) {
+                items += escapeHTML(o.product_names[i]) + ' x' + (o.quantities[i] || 1);
+                if (i < o.product_names.length - 1) items += ', ';
+            }
+            var date = new Date(o.created_at);
+            var dateStr = date.toLocaleDateString('pt-BR') + ' ' + date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+            var phone = formatPhone(o.client_phone);
+
+            var actionsHtml = '';
+            if (o.status === 'reserved') {
+                actionsHtml += '<button class="btn-outline btn-sm" onclick="AdminApp.markOrderPickedUp(\'' + jsString(o.id) + '\')">Retirado</button>';
+                actionsHtml += '<button class="btn-outline btn-sm btn-danger" onclick="AdminApp.cancelOrder(\'' + jsString(o.id) + '\')">Cancelar</button>';
+            }
+            if (o.status === 'reserved' || o.status === 'picked_up') {
+                var cleanPhone = o.client_phone.replace(/\D/g, '');
+                if (!cleanPhone.startsWith('55')) cleanPhone = '55' + cleanPhone;
+                var waText = 'Olá, ' + escapeHTML(o.client_name) + '! Sou da Pereira\'s Barber Shop sobre seu pedido: ' + items + ' - Total: ' + formatCurrency(o.total_price);
+                actionsHtml += '<a href="https://wa.me/' + cleanPhone + '?text=' + encodeURIComponent(waText) + '" class="btn-outline btn-sm" target="_blank" style="text-decoration:none;display:inline-flex;align-items:center;gap:4px"><i class="fab fa-whatsapp"></i></a>';
+            }
+
+            return '<div class="appointment-card" style="cursor:default">' +
+                '<div class="appointment-info">' +
+                    '<div class="appointment-details">' +
+                        '<div class="appointment-client">' + escapeHTML(o.client_name) + ' <span style="font-weight:400;font-size:0.8rem;color:var(--gray-500)">' + phone + '</span></div>' +
+                        '<div class="appointment-meta">' +
+                            '<span>' + escapeHTML(items) + '</span>' +
+                        '</div>' +
+                        '<div class="appointment-meta" style="margin-top:4px">' +
+                            '<span style="font-weight:700;color:var(--green-dark)">' + formatCurrency(o.total_price) + '</span>' +
+                            '<span style="font-size:0.8rem;color:var(--gray-400)">' + dateStr + '</span>' +
+                        '</div>' +
+                    '</div>' +
+                '</div>' +
+                '<div class="appointment-actions">' +
+                    '<span class="status-badge ' + statusClass + '">' + escapeHTML(statusLabel) + '</span>' +
+                    actionsHtml +
+                '</div>' +
+            '</div>';
+        }).join('');
+    }
+
+    async function markOrderPickedUp(id) {
+        var result = await sb.from('product_orders').update({ status: 'picked_up' }).eq('id', id);
+        if (result.error) {
+            toast('Erro: ' + result.error.message, 'error');
+        } else {
+            toast('Pedido marcado como retirado!', 'success');
+            loadProductOrders();
+        }
+    }
+
+    async function cancelOrder(id) {
+        showConfirm('Cancelar Pedido', 'Tem certeza que deseja cancelar este pedido?', async function () {
+            var result = await sb.from('product_orders').update({ status: 'cancelled' }).eq('id', id);
+            if (result.error) {
+                toast('Erro: ' + result.error.message, 'error');
+            } else {
+                toast('Pedido cancelado.', 'success');
+                loadProductOrders();
+            }
+        });
+    }
+
     // ========== ADMINS ==========
 
     async function loadAdmins() {
@@ -1540,6 +1814,7 @@
 
         $('btn-add-barber').addEventListener('click', function () { showBarberForm(null); });
         $('btn-add-service').addEventListener('click', function () { showServiceForm(null); });
+        $('btn-add-product').addEventListener('click', function () { showProductForm(null); });
         $('btn-add-admin').addEventListener('click', showAddAdminForm);
 
         $('filter-barber').addEventListener('change', function () { loadAppointments(1); });
@@ -1551,6 +1826,12 @@
             $('filter-status').value = '';
             $('filter-date').value = '';
             loadAppointments(1);
+        });
+
+        $('filter-order-status').addEventListener('change', function () { loadProductOrders(); });
+        $('btn-clear-order-filters').addEventListener('click', function () {
+            $('filter-order-status').value = '';
+            loadProductOrders();
         });
 
         checkSession();
@@ -1574,6 +1855,11 @@
         editService: editService,
         toggleService: toggleService,
         deleteService: deleteService,
+        editProduct: editProduct,
+        toggleProduct: toggleProduct,
+        deleteProduct: deleteProduct,
+        markOrderPickedUp: markOrderPickedUp,
+        cancelOrder: cancelOrder,
         goToPage: function (p) { loadAppointments(p); }
     };
 

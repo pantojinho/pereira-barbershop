@@ -74,6 +74,21 @@ async def supabase_config():
     return FileResponse(os.path.join(static_dir, "supabase-config.js"), media_type="application/javascript")
 
 
+@app.get("/produtos.html")
+async def produtos_page():
+    return FileResponse(os.path.join(static_dir, "produtos.html"))
+
+
+@app.get("/produtos.css")
+async def produtos_css():
+    return FileResponse(os.path.join(static_dir, "produtos.css"), media_type="text/css")
+
+
+@app.get("/produtos.js")
+async def produtos_js():
+    return FileResponse(os.path.join(static_dir, "produtos.js"), media_type="application/javascript")
+
+
 @app.get("/health")
 async def health_check():
     return {"status": "healthy", "service": "pereira-barbershop"}

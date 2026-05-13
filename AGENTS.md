@@ -50,6 +50,9 @@ Landing page tipo "cartao de visitas digital" + sistema de agendamento online pa
   admin.html                    ← Painel administrativo (login + CRUD)
   admin.css                     ← Estilos do painel admin
   admin.js                      ← Logica do painel admin (Supabase Client)
+  produtos.html                  ← Lojinha de produtos com carrinho (raiz)
+  produtos.css                   ← Estilos da lojinha (raiz)
+  produtos.js                    ← Logica do carrinho — fluxo: Produtos → Carrinho → Dados → Confirmacao
   supabase-config.js            ← Config Supabase (URL + anon key) — GITIGNORED
   supabase-schema.sql           ← SQL para criar tabelas (referencia)
   supabase-security-hardening.sql ← SQL para RLS + RPC + admin allow-list
@@ -995,6 +998,17 @@ Supabase Storage:
 - [x] Cancelar e concluir agendamentos
 - [x] Link WhatsApp direto pelo painel
 
+#### Fase 3.5 — Lojinha de Produtos (Concluida)
+- [x] Tabela products + product_orders no Supabase
+- [x] Pagina publica com carrinho (produtos.html/css/js)
+- [x] Fluxo: Produtos → Carrinho → Dados → Confirmacao
+- [x] Upload de foto de produto (Supabase Storage)
+- [x] CRUD de produtos no painel admin
+- [x] Dashboard de pedidos/reservas no painel admin
+- [x] Botao "Explorar Produtos" na landing page
+- [x] Botao "Explorar Lojinha" na confirmacao do agendamento
+- [x] Reserva sem pagamento (retirada na loja, pagamento na hora)
+
 #### Fase 4 — WhatsApp (Futuro)
 - [ ] Configurar Evolution API (self-hosted) ou Z-API
 - [ ] Notificacao de confirmacao para cliente
@@ -1005,3 +1019,113 @@ Supabase Storage:
 - [ ] Chatbot WhatsApp para agendamento
 - [ ] Relatorios (faturamento, clientes recorrentes)
 - [ ] Sistema de avaliacao
+
+---
+
+### Sessão 24 — 13/05/2026
+**Agente:** opencode (glm-5.1)
+**Tarefas realizadas:**
+- **Sistema completo de Lojinha de Produtos:**
+  - Nova tabela `products` no Supabase (name, description, price, photo_url, active, sort_order)
+  - Nova tabela `product_orders` no Supabase (product_ids, product_names, product_prices, quantities, client_name, client_phone, total_price, status: reserved/picked_up/cancelled)
+  - Novo bucket `product-photos` no Supabase Storage (publico, upload para admins)
+  - RLS habilitado em ambas as tabelas
+- **Página pública de produtos (produtos.html/css/js):**
+  - Fluxo de 3 passos: Produtos → Carrinho → Dados → Confirmação
+  - Grid de produtos com foto, nome, descrição, preço e botões +/- de quantidade
+  - Carrinho mostra itens selecionados com quantidades, total e endereço de retirada
+  - Formulário de dados do cliente (nome + WhatsApp)
+  - Confirmação salva no banco (product_orders) com status "reserved"
+  - Botão WhatsApp com mensagem formatada do pedido
+  - Botão "Agendar Horário" na tela de confirmação
+  - Badge de carrinho na barra de navegação
+  - Nenhum pagamento online — retirada na loja, pagamento na hora
+- **Painel Admin — aba Produtos:**
+  - CRUD completo (adicionar, editar, desativar, excluir)
+  - Upload de foto do produto (Supabase Storage, max 2MB)
+  - Cards com foto, nome, descrição e preço
+- **Painel Admin — aba Pedidos:**
+  - Lista de pedidos/reservas com nome, telefone, produtos, quantidade, total, data
+  - Filtro por status (Reservado, Retirado, Cancelado)
+  - Botão "Retirado" para marcar pedido como retirado
+  - Botão "Cancelar" para cancelar pedido
+  - Link WhatsApp direto para notificar cliente
+- **Landing Page:**
+  - Botão "Explorar Produtos" ao lado de "Agendar Horário"
+  - Estilo outline (borda verde) para diferenciar do botão principal
+- **Confirmação de Agendamento:**
+  - Botão "Explorar Lojinha" adicionado junto com "Voltar ao Início" e "WhatsApp"
+- Atualizou server.py para servir novos arquivos
+- Sincronizou todos os arquivos com pasta `static/`
+
+**Arquivos criados:**
+- `produtos.html` — Página da lojinha com fluxo de carrinho
+- `produtos.css` — Estilos da lojinha (consistente com identidade visual)
+- `produtos.js` — Lógica do carrinho (ShopApp: addProduct, removeProduct, cartPlus, cartMinus)
+
+**Arquivos modificados:**
+- `supabase-schema.sql` — Tabelas products, product_orders, bucket product-photos, RLS
+- `admin.html` — Abas Produtos e Pedidos
+- `admin.js` — CRUD products, loadProductOrders, renderProductOrders, markOrderPickedUp, cancelOrder
+- `index.html` — Botão "Explorar Produtos"
+- `style.css` — .cta-buttons, .products-cta
+- `agendar.html` — Botão "Explorar Lojinha" na confirmação
+- `agendar.css` — .btn-outline-product
+- `server.py` — Rotas para produtos.html/css/js
+- Todos sincronizados em `static/`
+
+**SQL para rodar no Supabase SQL Editor:**
+```sql
+-- Tabela de produtos
+CREATE TABLE IF NOT EXISTS products (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    name TEXT NOT NULL,
+    description TEXT,
+    price NUMERIC(10,2) NOT NULL,
+    photo_url TEXT,
+    active BOOLEAN NOT NULL DEFAULT true,
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- Tabela de pedidos/reservas
+CREATE TABLE IF NOT EXISTS product_orders (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    product_ids UUID[] NOT NULL,
+    product_names TEXT[] NOT NULL,
+    product_prices NUMERIC(10,2)[] NOT NULL,
+    quantities INTEGER[] NOT NULL,
+    client_name TEXT NOT NULL,
+    client_phone TEXT NOT NULL,
+    total_price NUMERIC(10,2) NOT NULL DEFAULT 0,
+    status TEXT NOT NULL DEFAULT 'reserved' CHECK (status IN ('reserved', 'picked_up', 'cancelled')),
+    created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- RLS
+ALTER TABLE products ENABLE ROW LEVEL SECURITY;
+ALTER TABLE product_orders ENABLE ROW LEVEL SECURITY;
+
+-- Policies
+CREATE POLICY "Public can read active products" ON products FOR SELECT USING (active = true);
+CREATE POLICY "Authenticated users can manage products" ON products FOR ALL USING (auth.role() = 'authenticated');
+CREATE POLICY "Public can create product orders" ON product_orders FOR INSERT WITH CHECK (true);
+CREATE POLICY "Authenticated users can manage product orders" ON product_orders FOR ALL USING (auth.role() = 'authenticated');
+
+-- Indices
+CREATE INDEX IF NOT EXISTS idx_products_active ON products(active, sort_order);
+CREATE INDEX IF NOT EXISTS idx_product_orders_status ON product_orders(status);
+
+-- Storage bucket
+INSERT INTO storage.buckets (id, name, public) VALUES ('product-photos', 'product-photos', true) ON CONFLICT (id) DO NOTHING;
+CREATE POLICY "Public can view product photos" ON storage.objects FOR SELECT USING (bucket_id = 'product-photos');
+CREATE POLICY "Authenticated can upload product photos" ON storage.objects FOR INSERT WITH CHECK (bucket_id = 'product-photos' AND auth.role() = 'authenticated');
+CREATE POLICY "Authenticated can update product photos" ON storage.objects FOR UPDATE USING (bucket_id = 'product-photos' AND auth.role() = 'authenticated');
+CREATE POLICY "Authenticated can delete product photos" ON storage.objects FOR DELETE USING (bucket_id = 'product-photos' AND auth.role() = 'authenticated');
+```
+
+**Pendências:**
+- Implementar notificacoes WhatsApp (Evolution API ou Z-API)
+- Chatbot WhatsApp para agendamento
+- Relatorios (faturamento, clientes recorrentes)
+- Sistema de avaliacao

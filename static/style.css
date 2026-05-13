@@ -121,13 +121,20 @@ body {
     justify-content: center;
 }
 
+.cta-buttons {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-top: var(--spacing-lg);
+}
+
 .booking-cta {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 10px;
     min-height: 48px;
-    margin-top: var(--spacing-lg);
     padding: 14px 24px;
     border-radius: 999px;
     background: var(--green-primary);
@@ -142,6 +149,31 @@ body {
 
 .booking-cta:hover {
     background: var(--green-hover);
+    transform: translateY(-2px);
+}
+
+.products-cta {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    min-height: 48px;
+    padding: 14px 24px;
+    border-radius: 999px;
+    background: transparent;
+    color: var(--green-primary);
+    font-weight: 800;
+    text-decoration: none;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border: 2px solid var(--green-primary);
+    box-shadow: var(--shadow-sm);
+    transition: all 0.2s ease;
+}
+
+.products-cta:hover {
+    background: var(--green-primary);
+    color: white;
     transform: translateY(-2px);
 }
 
@@ -438,10 +470,17 @@ body {
         font-size: 0.75rem;
     }
 
-    .booking-cta {
+    .cta-buttons {
+        width: 100%;
+        flex-direction: column;
+    }
+
+    .booking-cta,
+    .products-cta {
         width: 100%;
         min-height: 52px;
         font-size: 1rem;
+        justify-content: center;
     }
 
     .qr-section {

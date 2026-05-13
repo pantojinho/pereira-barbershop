@@ -69,6 +69,8 @@
             <button class="nav-tab" data-tab="appointments">Agendamentos</button>
             <button class="nav-tab" data-tab="barbers">Barbeiros</button>
             <button class="nav-tab" data-tab="services">Serviços</button>
+            <button class="nav-tab" data-tab="products">Produtos</button>
+            <button class="nav-tab" data-tab="product-orders">Pedidos</button>
             <button class="nav-tab" data-tab="admins">Administradores</button>
         </nav>
 
@@ -156,6 +158,36 @@
                     <button id="btn-add-service" class="btn-primary btn-sm">+ Novo Serviço</button>
                 </div>
                 <div id="services-list" class="card-grid">
+                    <p class="empty-state">Carregando...</p>
+                </div>
+            </section>
+
+            <!-- TAB: PRODUTOS -->
+            <section id="tab-products" class="tab-panel">
+                <div class="section-header">
+                    <h3>Gerenciar Produtos</h3>
+                    <button id="btn-add-product" class="btn-primary btn-sm">+ Novo Produto</button>
+                </div>
+                <div id="products-list" class="card-grid">
+                    <p class="empty-state">Carregando...</p>
+                </div>
+            </section>
+
+            <!-- TAB: PEDIDOS DE PRODUTOS -->
+            <section id="tab-product-orders" class="tab-panel">
+                <div class="section-header">
+                    <h3>Pedidos de Produtos</h3>
+                    <div class="filter-group">
+                        <select id="filter-order-status">
+                            <option value="">Todos os status</option>
+                            <option value="reserved">Reservado</option>
+                            <option value="picked_up">Retirado</option>
+                            <option value="cancelled">Cancelado</option>
+                        </select>
+                        <button id="btn-clear-order-filters" class="btn-outline btn-sm">Limpar</button>
+                    </div>
+                </div>
+                <div id="product-orders-list" class="appointment-list">
                     <p class="empty-state">Carregando...</p>
                 </div>
             </section>
