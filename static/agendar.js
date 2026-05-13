@@ -37,14 +37,18 @@
     }
 
     async function init() {
-        await loadBarbers();
-        await loadServices();
+        var urlParams = new URLSearchParams(window.location.search);
+        var preselectedBarber = urlParams.get('barber');
+        var preselectedService = urlParams.get('service');
+
+        await loadBarbers(preselectedBarber);
+        await loadServices(preselectedService);
         setupCalendar();
         setupNav();
         updateNavButtons();
     }
 
-    async function loadBarbers() {
+    async function loadBarbers(preselectedBarber) {
         try {
             var result = await sb.from('barbers').select('*').eq('active', true).order('sort_order');
             var barbers = result.data || [];
@@ -81,13 +85,13 @@
             });
             if (!html) html = '<p class="step-subtitle">Nenhum barbeiro disponível no momento.</p>';
             $('barber-list').innerHTML = html;
-            setupBarbers();
+            setupBarbers(preselectedBarber);
         } catch (err) {
             $('barber-list').innerHTML = '<p class="step-subtitle">Erro ao carregar barbeiros.</p>';
         }
     }
 
-    async function loadServices() {
+    async function loadServices(preselectedService) {
         try {
             var result = await sb.from('services').select('*').eq('active', true).order('sort_order');
             SERVICES_DB = result.data || [];
@@ -117,13 +121,13 @@
             });
             if (!html) html = '<p class="step-subtitle">Nenhum serviço disponível no momento.</p>';
             $('services-list').innerHTML = html;
-            setupServices();
+            setupServices(preselectedService);
         } catch (err) {
             $('services-list').innerHTML = '<p class="step-subtitle">Erro ao carregar serviços.</p>';
         }
     }
 
-    function setupBarbers() {
+    function setupBarbers(preselectedBarber) {
         var options = $$(".barber-option");
         options.forEach(function (opt) {
             opt.addEventListener("click", function () {
@@ -140,6 +144,13 @@
                 updateNavButtons();
             });
         });
+
+        if (preselectedBarber) {
+            var targetBarber = $$('.barber-option[data-barber="' + preselectedBarber + '"]');
+            if (targetBarber.length > 0) {
+                targetBarber[0].click();
+            }
+        }
     }
 
     function setupCalendar() {
@@ -331,7 +342,7 @@
         });
     }
 
-    function setupServices() {
+    function setupServices(preselectedService) {
         var options = $$(".service-option");
         options.forEach(function (opt) {
             opt.addEventListener("click", function () {
@@ -345,6 +356,13 @@
                 selectedDate = null;
             });
         });
+
+        if (preselectedService) {
+            var targetService = $$('.service-option[data-service="' + preselectedService + '"]');
+            if (targetService.length > 0) {
+                targetService[0].click();
+            }
+        }
     }
 
     function updateServiceSummary() {

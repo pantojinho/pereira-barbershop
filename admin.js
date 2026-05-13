@@ -474,7 +474,7 @@
     function getWhatsAppCancelLink(appointment) {
         var clean = appointment.client_phone.replace(/\D/g, '');
         if (!clean.startsWith('55')) clean = '55' + clean;
-        var text = 'Olá, ' + escapeHTML(appointment.client_name) + '! Infelizmente precisamos cancelar seu agendamento de ' + escapeHTML((appointment.service_names || []).join(', ')) + ' em ' + formatDate(appointment.appointment_date) + ' às ' + formatTime(appointment.appointment_time) + ' com ' + escapeHTML(appointment.barber ? appointment.barber.name : 'Barbeiro') + '. Pedimos desculpas pelo inconveniente. Para reagendar, acesse: https://pereira-barbershop.vercel.app/agendar.html';
+        var text = 'Olá, ' + escapeHTML(appointment.client_name) + '! 😊 Gostaríamos de confirmar com você sobre seu agendamento de ' + escapeHTML((appointment.service_names || []).join(', ')) + ' em ' + formatDate(appointment.appointment_date) + ' às ' + formatTime(appointment.appointment_time) + ' com ' + escapeHTML(appointment.barber ? appointment.barber.name : 'Barbeiro') + '.\n\nAlgum imprevisto aconteceu e precisamos fazer um ajuste. Pedimos mil desculpas! ❤️\n\nVocê pode reagendar pelo site: https://pereira-barbershop.vercel.app/agendar.html\n\nAgradecemos desde já! ✂️';
         return 'https://wa.me/' + clean + '?text=' + encodeURIComponent(text);
     }
 
@@ -505,20 +505,47 @@
 
             var cancelLink = getWhatsAppCancelLink(result.data);
 
-            $('appointment-details-body').innerHTML += '<div style="margin-top: 16px; padding: 12px; background: var(--danger-light); border-radius: 6px; border-left: 4px solid var(--danger);">' +
+            $('appointment-details-body').innerHTML += '<div id="cancel-warning-box" style="margin-top: 16px; padding: 12px; background: var(--danger-light); border-radius: 6px; border-left: 4px solid var(--danger);">' +
                 '<div style="font-weight: 600; color: var(--danger); margin-bottom: 8px;">&#9888; Notifique o cliente no WhatsApp</div>' +
                 '<div style="font-size: 0.85rem; color: var(--gray-600); margin-bottom: 12px;">Antes de confirmar o cancelamento, notifique o cliente clicando no link abaixo:</div>' +
                 '<a href="' + cancelLink + '" class="appointment-detail-cancel-link" target="_blank"><i class="fab fa-whatsapp"></i> Notificar Cliente (WhatsApp)</a>' +
                 '<div style="margin-top: 12px; font-size: 0.8rem; color: var(--gray-500);">Após notificar, clique em "Confirmar Cancelamento" abaixo.</div>' +
             '</div>';
 
-            var footerHTML = '<button onclick="AdminApp.confirmCancel(\'' + jsString(id) + '\')" class="btn-primary btn-danger">Confirmar Cancelamento</button>' +
+            var footerHTML = '<button onclick="AdminApp.rescheduleAppointment(\'' + jsString(id) + '\')" class="btn-primary">Reagendar</button>' +
+                '<button onclick="AdminApp.confirmCancel(\'' + jsString(id) + '\')" class="btn-primary btn-danger">Confirmar Cancelamento</button>' +
                 '<button onclick="AdminApp.showAppointmentDetails(\'' + jsString(id) + '\')" class="btn-outline">Voltar</button>';
             $('appointment-details-footer').innerHTML = '<div class="appointment-detail-actions">' + footerHTML + '</div>';
+
+            setTimeout(function() {
+                var warningBox = $('cancel-warning-box');
+                if (warningBox) warningBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }, 100);
 
         } catch (err) {
             console.error(err);
             toast('Erro ao preparar cancelamento.', 'error');
+        }
+    }
+
+    async function rescheduleAppointment(id) {
+        try {
+            var result = await sb.from('appointments').select('*').eq('id', id).single();
+            if (!result.data) {
+                toast('Agendamento não encontrado.', 'error');
+                return;
+            }
+
+            var a = result.data;
+            var params = new URLSearchParams();
+            if (a.barber_id) params.append('barber', a.barber_id);
+            if (a.service_ids && a.service_ids.length > 0) params.append('service', a.service_ids[0]);
+
+            closeAppointmentDetails();
+            window.location.href = 'agendar.html?' + params.toString();
+        } catch (err) {
+            console.error(err);
+            toast('Erro ao preparar reagendamento.', 'error');
         }
     }
 
@@ -1125,6 +1152,7 @@ showModal(title, html, async function () {
         closeAppointmentDetails: closeAppointmentDetails,
         confirmAppointment: confirmAppointment,
         cancelAppointmentFromDetails: cancelAppointmentFromDetails,
+        rescheduleAppointment: rescheduleAppointment,
         confirmCancel: confirmCancel,
         deleteAppointment: deleteAppointment,
         completeAppointment: completeAppointment,
