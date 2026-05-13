@@ -738,7 +738,7 @@ CREATE POLICY "Admins can delete admins" ON public.admins
 
 ---
 
-### Sessao 14 — 13/05/2026
+### Sessão 14 — 13/05/2026
 **Agente:** opencode (glm-5.1)
 **Tarefas realizadas:**
 - **Correcao do formulario de horarios do barbeiro (bug critico):**
@@ -771,6 +771,48 @@ CREATE POLICY "Admins can delete admins" ON public.admins
 - `admin.html` — Removido tab e secao Feriados
 - `agendar.js` — Removido HOLIDAYS, loadHolidays, isHoliday, works_holidays
 - Todos sincronizados em `static/`
+
+**Pendencias:**
+- Implementar notificacoes WhatsApp (Evolution API ou Z-API)
+- Chatbot WhatsApp para agendamento
+- Relatorios (faturamento, clientes recorrentes)
+- Sistema de avaliacao
+
+---
+
+### Sessão 15 — 13/05/2026 (noite)
+**Agente:** opencode (glm-5.1)
+**Tarefas realizadas:**
+- **Melhoria do formulario de horarios do barbeiro para mobile (UX critica):**
+  - Problema: o formulario de horarios por dia usava layout de grid (1 linha com checkbox + 3 inputs), o que era ruim no celular
+  - Solucao: mudou de layout horizontal para vertical empilhado
+  - Cada dia agora e um bloco independente com:
+    - Checkbox do dia no topo (com font-size maior e mais spacing)
+    - Inputs de horario abaixo do checkbox (empilhados horizontalmente)
+  - Touch targets aumentados:
+    - Checkbox: 22x22px (antes 16x16px)
+    - Inputs de horario: min-height 44px (antes 36px)
+    - Padding geral aumentado
+  - Visual melhorado:
+    - Cada dia tem fundo creme (`var(--gray-100)`) e borda
+    - Border-radius aplicado em cada bloco
+    - Labels mais legiveis (font-weight 600, color dark)
+  - HTML reestruturado:
+    - Adicionado wrapper `.time-inputs` ao redor dos inputs de horario
+    - Flexbox para alinhamento dos inputs de horario
+- Sincronizou arquivos com pasta `static/`
+- Commit e push para o GitHub (`f786498`)
+
+**Arquivos modificados:**
+- `admin.css` — CSS reescrito para `.schedule-grid`, `.schedule-row`, `.schedule-day-check`, `.time-inputs`
+- `admin.js` — HTML gerado pela `showBarberForm` atualizado com wrapper `.time-inputs`
+- `static/admin.css` — Sincronizado
+- `static/admin.js` — Sincronizado
+
+**Notas importantes:**
+- O formulario agora funciona muito melhor no celular com touch targets maiores e layout vertical
+- Cada dia e claramente separado visualmente, facilitando a navegacao
+- A estrutura CSS e flexivel e funciona bem em todos os tamanhos de tela
 
 **Pendencias:**
 - Implementar notificacoes WhatsApp (Evolution API ou Z-API)
