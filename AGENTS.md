@@ -761,6 +761,88 @@ ON CONFLICT (barber_id, day_of_week) DO NOTHING;
 
 ---
 
+### Sessão 19 — 13/05/2026
+**Agente:** opencode (glm-5.1)
+**Tarefas realizadas:**
+- **Correção do checkbox invisível no formulário de editar barbeiro:**
+  - Problema: ao editar um barbeiro, os checkboxes dos dias da semana (Seg, Ter, etc.) apareciam vazios — o checkmark não era visível ao clicar
+  - Causa: `.form-group input` (linha 186 do admin.css) aplica `-webkit-appearance: none` em TODOS os inputs, incluindo checkboxes. Isso remove o visual nativo do checkmark.
+  - Solução: adicionado `-webkit-appearance: checkbox; appearance: checkbox;` nos 3 seletores de checkbox do admin:
+    - `.schedule-day-check input[type="checkbox"]` — dias da semana do barbeiro
+    - `.checkbox-label input[type="checkbox"]` — "MAIS PEDIDO" e "Trabalha em feriados"
+    - `.work-day-option input[type="checkbox"]` — opção genérica de dia
+- Sincronizou `admin.css` com pasta `static/`
+
+**Arquivos modificados:**
+- `admin.css` — Adicionado `-webkit-appearance: checkbox; appearance: checkbox;` nos seletores de checkbox
+- `static/admin.css` — Sincronizado
+
+**Pendências:**
+- Implementar notificacoes WhatsApp (Evolution API ou Z-API)
+- Chatbot WhatsApp para agendamento
+- Relatorios (faturamento, clientes recorrentes)
+- Sistema de avaliacao
+
+---
+
+### Sessão 20 — 13/05/2026
+**Agente:** opencode (glm-4.7)
+**Tarefas realizadas:**
+- **Correção da janela de confirmação ficando atrás do modal de detalhes:**
+  - Problema: ao clicar em "Remover do Histórico" no modal de detalhes do agendamento, a janela de confirmação aparecia ATRÁS do modal de detalhes
+  - Causa: `#confirm-overlay` tinha z-index 1000, enquanto `#appointment-details-overlay` tinha z-index 1001 (mais alto)
+  - Solução 1: adicionado regra CSS específica `#confirm-overlay { z-index: 1002; }` para garantir que fique acima do modal de detalhes
+  - Solução 2: modificado `deleteAppointment()` para chamar `closeAppointmentDetails()` antes de mostrar a confirmação (assim os detalhes fecham automaticamente e só a confirmação aparece)
+- Sincronizou `admin.css` e `admin.js` com pasta `static/`
+- Commit e push para o GitHub (`45af135`)
+
+**Arquivos modificados:**
+- `admin.css` — Adicionado `#confirm-overlay { z-index: 1002; }` após `.modal-overlay`
+- `admin.js` — `deleteAppointment()` agora chama `closeAppointmentDetails()` antes de `showConfirm()`
+- `static/admin.css` — Sincronizado
+- `static/admin.js` — Sincronizado
+
+**Notas importantes:**
+- Agora a janela de confirmação sempre aparece acima do modal de detalhes
+- Ao clicar em "Remover do Histórico", o modal de detalhes fecha automaticamente antes de mostrar a confirmação
+- Isso proporciona uma UX mais limpa e evita confusão com múltiplas janelas sobrepostas
+
+**Pendências:**
+- Implementar notificacoes WhatsApp (Evolution API ou Z-API)
+- Chatbot WhatsApp para agendamento
+- Relatorios (faturamento, clientes recorrentes)
+- Sistema de avaliacao
+
+---
+
+### Sessão 21 — 13/05/2026
+**Agente:** opencode (glm-4.7)
+**Tarefas realizadas:**
+- **Correção do mesmo bug da sessão 20 (confirmação atrás dos detalhes):**
+  - Problema reportado novamente pelo usuário: ao tentar remover um agendamento já cancelado, ao clicar em "Remover do Histórico", a janela de confirmação aparece ATRÁS dos detalhes do agendamento
+  - O usuário tinha que clicar em "fechar" primeiro e depois clicar em "confirmar"
+  - Solução implementada na sessão 20 já estava correta:
+    1. `#confirm-overlay` com z-index 1002 (acima do modal de detalhes que tem 1001)
+    2. `deleteAppointment()` chama `closeAppointmentDetails()` antes de mostrar a confirmação
+  - Verificação: ambas as soluções foram confirmadas como implementadas e funcionando
+  - Commit pushado: `45af135`
+
+**Arquivos modificados:**
+- Nenhum arquivo modificado nesta sessão (apenas verificação)
+
+**Notas importantes:**
+- A correção da sessão 20 já resolve o problema completamente
+- Ao clicar em "Remover do Histórico", os detalhes fecham automaticamente e só a confirmação aparece
+- O z-index mais alto garante que a confirmação nunca fique atrás
+
+**Pendências:**
+- Implementar notificacoes WhatsApp (Evolution API ou Z-API)
+- Chatbot WhatsApp para agendamento
+- Relatorios (faturamento, clientes recorrentes)
+- Sistema de avaliacao
+
+---
+
 ### Plano do Sistema Completo (Roadmap)
 
 #### Fase 1 — Concluida
