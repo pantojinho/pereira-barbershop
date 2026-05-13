@@ -112,6 +112,32 @@ Quando editar HTML/CSS/logo, faca em **AMBOS** os lugares:
 
 ---
 
+### Sessao 2 — 12/05/2026 (23:00)
+**Agente:** opencode (glm-5.1)
+**Tarefas realizadas:**
+- Diagnosticou que o Vercel servia CSS/logo em `/static/` (404) pois a config antiga usava `@vercel/python`
+- Confirmou que o Vercel detectava projeto como Python por causa do `requirements.txt`
+- Copiou `logo Png.png` para `logo.png` (nome sem espacos)
+- Copiou `index.html`, `style.css`, `logo.png`, `favicon.svg` para a raiz do projeto
+- Atualizou `vercel.json` para deploy estatico puro (`framework: null`, `outputDirectory: "."`)
+- Removeu `requirements.txt` do tracking git (`git rm --cached`) e adicionou ao `.gitignore`
+- Atualizou caminhos no HTML de `/static/...` para caminhos relativos
+- Criou o documento `AGENTS.md` com memoria/orientacao para agentes de IA
+- Fez commit e push para o GitHub
+- Verificou que o site esta funcionando no Vercel (HTML, CSS, logo e favicon OK)
+
+**Pendencias:**
+- Substituir QR Code placeholder por QR Code real (link WhatsApp)
+- Sincronizar pasta `static/` com arquivos da raiz para servidor local funcionar
+
+**Notas:**
+- O Vercel agora serve os arquivos da raiz do projeto como site estatico
+- O `requirements.txt` existe localmente mas NAO vai para o git (esta no .gitignore)
+- Para usar o servidor local: `python server.py` (serve da pasta `static/`)
+- IMPORTANTE: ao editar HTML/CSS, atualizar AMBOS (raiz + static/)
+
+---
+
 <!-- TEMPLATE PARA NOVAS SESSOES
 ### Sessao X — DD/MM/AAAA (HH:MM)
 **Agente:** [nome do agente/modelo]
