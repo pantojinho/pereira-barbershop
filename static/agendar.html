@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Agende seu horário na Pereira's Barber Shop">
+    <meta name="theme-color" content="#2D4B40">
+    <title>Agendar | Pereira's Barber Shop</title>
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="agendar.css">
+</head>
+<body>
+    <header class="booking-header">
+        <a href="index.html" class="back-link">
+            <i class="fas fa-arrow-left"></i> Voltar
+        </a>
+        <div class="header-brand">
+            <img src="logo.png" alt="Pereira's Barber Shop" class="header-logo">
+            <h1>Agendar Horário</h1>
+        </div>
+    </header>
+
+    <div class="stepper">
+        <div class="step active" data-step="1">
+            <div class="step-number">1</div>
+            <div class="step-label">Barbeiro</div>
+        </div>
+        <div class="step-line"></div>
+        <div class="step" data-step="2">
+            <div class="step-number">2</div>
+            <div class="step-label">Data e Hora</div>
+        </div>
+        <div class="step-line"></div>
+        <div class="step" data-step="3">
+            <div class="step-number">3</div>
+            <div class="step-label">Serviço</div>
+        </div>
+        <div class="step-line"></div>
+        <div class="step" data-step="4">
+            <div class="step-number">4</div>
+            <div class="step-label">Dados</div>
+        </div>
+    </div>
+
+    <main class="booking-main">
+
+        <!-- PASSO 1: Escolher Barbeiro -->
+        <section class="step-content active" id="step-1">
+            <h2 class="step-title">Escolha seu Barbeiro</h2>
+            <p class="step-subtitle">Selecione o profissional de sua preferência</p>
+            <div class="barber-selection" id="barber-list">
+                <div class="barber-option" data-barber="rafael">
+                    <div class="barber-icon"><i class="fas fa-cut"></i></div>
+                    <div class="barber-info">
+                        <div class="barber-name">Rafael</div>
+                        <div class="barber-desc">Barbeiro</div>
+                    </div>
+                    <div class="barber-check"><i class="fas fa-check-circle"></i></div>
+                </div>
+                <div class="barber-option" data-barber="gabriel">
+                    <div class="barber-icon"><i class="fas fa-cut"></i></div>
+                    <div class="barber-info">
+                        <div class="barber-name">Gabriel</div>
+                        <div class="barber-desc">Barbeiro</div>
+                    </div>
+                    <div class="barber-check"><i class="fas fa-check-circle"></i></div>
+                </div>
+                <div class="barber-option" data-barber="marcus">
+                    <div class="barber-icon"><i class="fas fa-cut"></i></div>
+                    <div class="barber-info">
+                        <div class="barber-name">Marcus Vinicius</div>
+                        <div class="barber-desc">Barbeiro</div>
+                    </div>
+                    <div class="barber-check"><i class="fas fa-check-circle"></i></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- PASSO 2: Escolher Data e Hora -->
+        <section class="step-content" id="step-2">
+            <h2 class="step-title">Escolha Data e Horário</h2>
+            <p class="step-subtitle">Selecione o dia e o horário disponível</p>
+
+            <div class="datetime-container">
+                <div class="date-picker">
+                    <div class="calendar-header">
+                        <button type="button" id="prev-month"><i class="fas fa-chevron-left"></i></button>
+                        <span id="current-month-year"></span>
+                        <button type="button" id="next-month"><i class="fas fa-chevron-right"></i></button>
+                    </div>
+                    <div class="calendar-weekdays">
+                        <span>Dom</span><span>Seg</span><span>Ter</span><span>Qua</span><span>Qui</span><span>Sex</span><span>Sab</span>
+                    </div>
+                    <div class="calendar-days" id="calendar-days"></div>
+                </div>
+
+                <div class="time-picker">
+                    <h3>Horários Disponíveis</h3>
+                    <p class="time-hint" id="time-hint">Selecione uma data primeiro</p>
+                    <div class="time-slots" id="time-slots"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- PASSO 3: Escolher Servico -->
+        <section class="step-content" id="step-3">
+            <h2 class="step-title">Escolha o Serviço</h2>
+            <p class="step-subtitle">Selecione um ou mais serviços</p>
+
+            <div class="services-selection" id="services-list">
+                <div class="service-option" data-service="corte" data-price="43" data-duration="60">
+                    <div class="service-radio"><i class="far fa-circle"></i></div>
+                    <div class="service-info">
+                        <div class="service-name">Corte</div>
+                        <div class="service-detail">Sobrancelha cortesia</div>
+                    </div>
+                    <div class="service-meta">
+                        <div class="service-price">R$ 43,00</div>
+                        <div class="service-duration"><i class="far fa-clock"></i> 1h</div>
+                    </div>
+                </div>
+
+                <div class="service-option featured" data-service="corte-barbaterapia" data-price="75" data-duration="80">
+                    <div class="service-tag">MAIS PEDIDO</div>
+                    <div class="service-radio"><i class="far fa-circle"></i></div>
+                    <div class="service-info">
+                        <div class="service-name">Corte + Barbaterapia</div>
+                        <div class="service-detail">Sobrancelha cortesia</div>
+                    </div>
+                    <div class="service-meta">
+                        <div class="service-price">R$ 75,00</div>
+                        <div class="service-duration"><i class="far fa-clock"></i> 1h20</div>
+                    </div>
+                </div>
+
+                <div class="service-option" data-service="barbaterapia" data-price="43" data-duration="60">
+                    <div class="service-radio"><i class="far fa-circle"></i></div>
+                    <div class="service-info">
+                        <div class="service-name">Barbaterapia</div>
+                        <div class="service-detail">Pezinho cortesia</div>
+                    </div>
+                    <div class="service-meta">
+                        <div class="service-price">R$ 43,00</div>
+                        <div class="service-duration"><i class="far fa-clock"></i> 1h</div>
+                    </div>
+                </div>
+
+                <div class="service-option" data-service="orelha-nariz" data-price="25" data-duration="30">
+                    <div class="service-radio"><i class="far fa-circle"></i></div>
+                    <div class="service-info">
+                        <div class="service-name">Orelha e Nariz com Cera</div>
+                        <div class="service-detail">Remoção com cera</div>
+                    </div>
+                    <div class="service-meta">
+                        <div class="service-price">R$ 25,00</div>
+                        <div class="service-duration"><i class="far fa-clock"></i> 30min</div>
+                    </div>
+                </div>
+
+                <div class="service-option" data-service="selagem" data-price="50" data-duration="60">
+                    <div class="service-radio"><i class="far fa-circle"></i></div>
+                    <div class="service-info">
+                        <div class="service-name">Selagem</div>
+                        <div class="service-detail">Tratamento capilar</div>
+                    </div>
+                    <div class="service-meta">
+                        <div class="service-price">R$ 50,00</div>
+                        <div class="service-duration"><i class="far fa-clock"></i> 1h</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="services-summary" id="services-summary">
+                <div class="summary-row">
+                    <span>Total:</span>
+                    <span id="total-price">R$ 0,00</span>
+                </div>
+                <div class="summary-row">
+                    <span>Duração estimada:</span>
+                    <span id="total-duration">0 min</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- PASSO 4: Dados do Cliente -->
+        <section class="step-content" id="step-4">
+            <h2 class="step-title">Seus Dados</h2>
+            <p class="step-subtitle">Preencha seus dados para confirmar o agendamento</p>
+
+            <form class="client-form" id="client-form">
+                <div class="form-group">
+                    <label for="client-name"><i class="fas fa-user"></i> Nome Completo</label>
+                    <input type="text" id="client-name" placeholder="Digite seu nome" required>
+                </div>
+                <div class="form-group">
+                    <label for="client-phone"><i class="fas fa-phone"></i> WhatsApp</label>
+                    <input type="tel" id="client-phone" placeholder="(15) 99999-9999" required>
+                </div>
+            </form>
+
+            <div class="booking-summary" id="booking-summary">
+                <h3>Resumo do Agendamento</h3>
+                <div class="summary-card">
+                    <div class="summary-item">
+                        <i class="fas fa-user"></i>
+                        <span id="sum-barber">-</span>
+                    </div>
+                    <div class="summary-item">
+                        <i class="fas fa-calendar"></i>
+                        <span id="sum-date">-</span>
+                    </div>
+                    <div class="summary-item">
+                        <i class="fas fa-clock"></i>
+                        <span id="sum-time">-</span>
+                    </div>
+                    <div class="summary-item">
+                        <i class="fas fa-cut"></i>
+                        <span id="sum-services">-</span>
+                    </div>
+                    <div class="summary-item total">
+                        <i class="fas fa-money-bill-wave"></i>
+                        <span id="sum-total">-</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- CONFIRMACAO -->
+        <section class="step-content" id="step-confirm">
+            <div class="confirmation-box">
+                <div class="confirm-icon">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+                <h2>Agendamento Confirmado!</h2>
+                <p class="confirm-text">Seu horário foi reservado com sucesso.</p>
+                <div class="confirm-details" id="confirm-details"></div>
+                <p class="confirm-whatsapp">Você receberá uma confirmação no WhatsApp.</p>
+                <div class="confirm-actions">
+                    <a href="index.html" class="btn-secondary">
+                        <i class="fas fa-home"></i> Voltar ao Início
+                    </a>
+                    <a href="#" class="btn-whatsapp" id="btn-whatsapp-confirm" target="_blank" rel="noopener">
+                        <i class="fab fa-whatsapp"></i> WhatsApp
+                    </a>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <div class="booking-nav" id="booking-nav">
+        <button type="button" class="btn-back" id="btn-back">
+            <i class="fas fa-arrow-left"></i> Voltar
+        </button>
+        <button type="button" class="btn-next" id="btn-next">
+            Próximo <i class="fas fa-arrow-right"></i>
+        </button>
+    </div>
+
+    <script src="agendar.js"></script>
+</body>
+</html>

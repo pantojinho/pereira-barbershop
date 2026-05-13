@@ -8,15 +8,33 @@
 
 ## Projeto
 
-**Nome:** Pereira's Barber Shop — Landing Page
+**Nome:** Pereira's Barber Shop — Landing Page + Sistema de Agendamento
 **URL Producao:** https://pereira-barbershop.vercel.app
+**URL Agendamento:** https://pereira-barbershop.vercel.app/agendar.html
 **Repo:** https://github.com/ciandrini/pereira-barbershop
-**Framework:** Site estatico (HTML + CSS puro)
+**Framework:** Site estatico (HTML + CSS + JS puro)
 **Deploy:** Vercel (static files, sem framework, sem build)
 **Servidor local:** FastAPI (`server.py`) servindo pasta `static/` na porta 8000
+**Banco de Dados (futuro):** Supabase Free (PostgreSQL + Auth)
+**WhatsApp (futuro):** Evolution API ou Z-API
 
 ### Proposito
-Landing page tipo "cartao de visitas digital" para a barbearia Pereira's Barber Shop em Votorantim, SP. Exibe logo, informacoes de contato, endereco, horario de funcionamento e QR Code para agendamento.
+Landing page tipo "cartao de visitas digital" + sistema de agendamento online para a barbearia Pereira's Barber Shop em Votorantim, SP.
+
+### Barbeiros
+- Rafael
+- Gabriel
+- Marcus Vinicius
+- (sistema escalavel para mais barbeiros no futuro)
+
+### Servicos e Precos
+| Servico | Preco | Duracao |
+|---|---|---|
+| Corte (sobrancelha cortesia) | R$ 43,00 | 1h |
+| Corte + Barbaterapia (sobrancelha cortesia) | R$ 75,00 | 1h20 |
+| Barbaterapia (pezinho cortesia) | R$ 43,00 | 1h |
+| Orelha e Nariz com cera | R$ 25,00 | 30min |
+| Selagem | R$ 50,00 | 1h |
 
 ---
 
@@ -25,7 +43,10 @@ Landing page tipo "cartao de visitas digital" para a barbearia Pereira's Barber 
 ```
 /
   index.html          ← Pagina principal (raiz, usada pelo Vercel)
-  style.css           ← Estilos (raiz, usada pelo Vercel)
+  style.css           ← Estilos da landing page (raiz, usada pelo Vercel)
+  agendar.html        ← Pagina de agendamento (raiz, usada pelo Vercel)
+  agendar.css         ← Estilos da pagina de agendamento (raiz)
+  agendar.js          ← Logica do agendamento (raiz)
   logo.png            ← Logo oficial (raiz, usada pelo Vercel)
   favicon.svg         ← Favicon (raiz, usada pelo Vercel)
   vercel.json         ← Config do Vercel (framework: null, outputDirectory: ".")
@@ -34,6 +55,9 @@ Landing page tipo "cartao de visitas digital" para a barbearia Pereira's Barber 
   static/             ← Pasta usada pelo server.py local
     index.html        ← Copia da pagina (mantida sincronizada)
     style.css         ← Copia dos estilos (mantida sincronizada)
+    agendar.html      ← Copia da pagina de agendamento
+    agendar.css       ← Copia dos estilos
+    agendar.js        ← Copia da logica
     logo.png          ← Copia da logo
     logo Png.png      ← Arquivo original com espaco no nome
     logo-original.jpg ← Logo antiga (legado)
@@ -135,6 +159,79 @@ Quando editar HTML/CSS/logo, faca em **AMBOS** os lugares:
 - O `requirements.txt` existe localmente mas NAO vai para o git (esta no .gitignore)
 - Para usar o servidor local: `python server.py` (serve da pasta `static/`)
 - IMPORTANTE: ao editar HTML/CSS, atualizar AMBOS (raiz + static/)
+
+---
+
+### Sessao 3 — 12/05/2026 (23:30)
+**Agente:** opencode (glm-5.1)
+**Tarefas realizadas:**
+- Restaurou `index.html` original (sem mexer na landing page)
+- Adicionou QR Code real na landing page apontando para `agendar.html` (via API qrserver.com)
+- Criou pagina exclusiva de agendamento `agendar.html` com fluxo de 4 passos:
+  1. Escolher barbeiro (Rafael, Gabriel, Marcus Vinicius)
+  2. Escolher data (calendario interativo) e horario disponivel
+  3. Escolher servico(s) com precos e duracao (selecao multipla)
+  4. Dados do cliente (nome + WhatsApp) + resumo do agendamento
+- Criou `agendar.css` com design consistente com a identidade visual
+- Criou `agendar.js` com toda logica: calendario, time slots, validacao, mascara de telefone, resumo, confirmacao com link WhatsApp
+- Atualizou `server.py` para servir a pagina de agendamento localmente
+- Sincronizou todos os arquivos com a pasta `static/`
+- Atualizou `AGENTS.md` com barbeiros, servicos/precos e novo log
+
+**Fluxo do agendamento (corrigido):**
+1. Passo 1: Escolher barbeiro
+2. Passo 2: Escolher data e horario
+3. Passo 3: Escolher servico(s)
+4. Passo 4: Nome + Telefone (WhatsApp)
+5. Tela de confirmacao com link WhatsApp
+
+**Pendencias:**
+- Conectar agendamento ao Supabase (banco de dados real)
+- Criar painel admin com login (Supabase Auth)
+- Implementar notificacoes WhatsApp (Evolution API)
+- Substituir dados estaticos por dados do banco (barbeiros, servicos, horarios)
+- Gerar QR Code real apontando para pagina de agendamento
+
+**Notas:**
+- A pagina de agendamento funciona 100% frontend (sem backend ainda)
+- Os dados de barbeiros/servicos estao hardcoded no `agendar.js`
+- A confirmacao gera mensagem formatada para WhatsApp
+- Horarios de cada barbeiro sao configuraveis no objeto `BARBERS` no `agendar.js`
+
+---
+
+### Plano do Sistema Completo (Roadmap)
+
+#### Fase 1 — Atual (Concluida)
+- [x] Landing page funcional no Vercel
+- [x] QR Code real na landing page
+- [x] Pagina de agendamento (frontend)
+
+#### Fase 2 — Backend + Banco de Dados
+- [ ] Configurar Supabase (PostgreSQL + Auth)
+- [ ] Criar tabelas: barbeiros, servicos, agendamentos, usuarios_admin
+- [ ] Backend FastAPI conectado ao Supabase
+- [ ] Substituir dados estaticos por chamadas a API
+- [ ] Deploy do backend (Oracle Cloud Free ou Render Free)
+
+#### Fase 3 — Painel Admin
+- [ ] Tela de login (Supabase Auth)
+- [ ] Dashboard com agenda do dia
+- [ ] Gerenciar barbeiros, servicos, horarios
+- [ ] Historico de agendamentos
+- [ ] Cancelar/reagendar
+
+#### Fase 4 — WhatsApp
+- [ ] Configurar Evolution API (self-hosted) ou Z-API
+- [ ] Notificacao de confirmacao para cliente
+- [ ] Notificacao de novo agendamento para dono
+- [ ] Lembrete 1h antes do horario
+- [ ] Notificacao de cancelamento
+
+#### Fase 5 — Melhorias
+- [ ] Chatbot WhatsApp para agendamento
+- [ ] Relatorios (faturamento, clientes recorrentes)
+- [ ] Sistema de avaliacao
 
 ---
 

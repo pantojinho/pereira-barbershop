@@ -1,6 +1,6 @@
 """
 Pereira's Barber Shop - Web Server
-FastAPI application serving the landing page
+FastAPI application serving the landing page and booking page
 """
 
 from fastapi import FastAPI
@@ -11,21 +11,51 @@ import os
 app = FastAPI(
     title="Pereira's Barber Shop",
     description="Good Times, Great People, Quality Cut",
-    version="1.0.0"
+    version="1.1.0"
 )
 
-# Mount static files directory
 static_dir = os.path.join(os.path.dirname(__file__), "static")
-app.mount("/static", StaticFiles(directory=static_dir), name="static")
+
+app.mount("/assets", StaticFiles(directory=static_dir), name="assets")
+
 
 @app.get("/")
 async def root():
-    """Serve the main landing page"""
     return FileResponse(os.path.join(static_dir, "index.html"))
+
+
+@app.get("/agendar.html")
+async def agendar():
+    return FileResponse(os.path.join(static_dir, "agendar.html"))
+
+
+@app.get("/style.css")
+async def style():
+    return FileResponse(os.path.join(static_dir, "style.css"), media_type="text/css")
+
+
+@app.get("/agendar.css")
+async def agendar_css():
+    return FileResponse(os.path.join(static_dir, "agendar.css"), media_type="text/css")
+
+
+@app.get("/agendar.js")
+async def agendar_js():
+    return FileResponse(os.path.join(static_dir, "agendar.js"), media_type="application/javascript")
+
+
+@app.get("/logo.png")
+async def logo():
+    return FileResponse(os.path.join(static_dir, "logo.png"), media_type="image/png")
+
+
+@app.get("/favicon.svg")
+async def favicon():
+    return FileResponse(os.path.join(static_dir, "favicon.svg"), media_type="image/svg+xml")
+
 
 @app.get("/health")
 async def health_check():
-    """Health check endpoint"""
     return {"status": "healthy", "service": "pereira-barbershop"}
 
 if __name__ == "__main__":
