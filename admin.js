@@ -540,6 +540,7 @@
     }
 
     async function deleteAppointment(id) {
+        closeAppointmentDetails();
         showConfirm('Remover Agendamento', 'Tem certeza que deseja remover este agendamento do histórico? Esta ação não pode ser desfeita.', async function () {
             try {
                 var result = await sb.from('appointments').delete().eq('id', id);
@@ -547,7 +548,6 @@
                     toast('Erro ao remover: ' + result.error.message, 'error');
                 } else {
                     toast('Agendamento removido do histórico.', 'success');
-                    closeAppointmentDetails();
                     loadDashboard();
                     loadAppointments(currentPage);
                 }

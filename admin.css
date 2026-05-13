@@ -789,6 +789,8 @@ body {
 }
 
 .checkbox-label input[type="checkbox"] {
+    -webkit-appearance: checkbox;
+    appearance: checkbox;
     width: 18px;
     height: 18px;
     accent-color: var(--gold);
@@ -897,6 +899,10 @@ body {
     justify-content: center;
     z-index: 1000;
     padding: 20px;
+}
+
+#confirm-overlay {
+    z-index: 1002;
 }
 
 .modal-card {
@@ -1103,6 +1109,8 @@ body {
 }
 
 .work-day-option input[type="checkbox"] {
+    -webkit-appearance: checkbox;
+    appearance: checkbox;
     accent-color: var(--green-dark);
 }
 
@@ -1138,6 +1146,8 @@ body {
 }
 
 .schedule-day-check input[type="checkbox"] {
+    -webkit-appearance: checkbox;
+    appearance: checkbox;
     accent-color: var(--green-dark);
     width: 22px;
     height: 22px;
