@@ -418,14 +418,14 @@ body {
 
 .admin-link {
     position: fixed;
-    bottom: 16px;
+    top: 16px;
     right: 16px;
     padding: 8px 16px;
     display: flex;
     align-items: center;
     gap: 6px;
-    background: rgba(45, 75, 64, 0.08);
-    color: rgba(45, 75, 64, 0.45);
+    background: rgba(248, 245, 237, 0.9);
+    color: rgba(45, 75, 64, 0.5);
     text-decoration: none;
     border-radius: 20px;
     font-size: 0.75rem;
@@ -439,7 +439,7 @@ body {
 
 .admin-link:hover {
     color: #2D4B40;
-    background: rgba(45, 75, 64, 0.15);
+    background: rgba(248, 245, 237, 1);
 }
 
 @media (max-width: 480px) {
