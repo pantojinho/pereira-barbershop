@@ -53,30 +53,7 @@
             <h2 class="step-title">Escolha seu Barbeiro</h2>
             <p class="step-subtitle">Selecione o profissional de sua preferência</p>
             <div class="barber-selection" id="barber-list">
-                <div class="barber-option" data-barber="rafael">
-                    <div class="barber-icon"><i class="fas fa-cut"></i></div>
-                    <div class="barber-info">
-                        <div class="barber-name">Rafael</div>
-                        <div class="barber-desc">Barbeiro</div>
-                    </div>
-                    <div class="barber-check"><i class="fas fa-check-circle"></i></div>
-                </div>
-                <div class="barber-option" data-barber="gabriel">
-                    <div class="barber-icon"><i class="fas fa-cut"></i></div>
-                    <div class="barber-info">
-                        <div class="barber-name">Gabriel</div>
-                        <div class="barber-desc">Barbeiro</div>
-                    </div>
-                    <div class="barber-check"><i class="fas fa-check-circle"></i></div>
-                </div>
-                <div class="barber-option" data-barber="marcus">
-                    <div class="barber-icon"><i class="fas fa-cut"></i></div>
-                    <div class="barber-info">
-                        <div class="barber-name">Marcus Vinicius</div>
-                        <div class="barber-desc">Barbeiro</div>
-                    </div>
-                    <div class="barber-check"><i class="fas fa-check-circle"></i></div>
-                </div>
+                <p class="step-subtitle">Carregando barbeiros...</p>
             </div>
         </section>
 
@@ -112,66 +89,7 @@
             <p class="step-subtitle">Selecione um ou mais serviços</p>
 
             <div class="services-selection" id="services-list">
-                <div class="service-option" data-service="corte" data-price="43" data-duration="60">
-                    <div class="service-radio"><i class="far fa-circle"></i></div>
-                    <div class="service-info">
-                        <div class="service-name">Corte</div>
-                        <div class="service-detail">Sobrancelha cortesia</div>
-                    </div>
-                    <div class="service-meta">
-                        <div class="service-price">R$ 43,00</div>
-                        <div class="service-duration"><i class="far fa-clock"></i> 1h</div>
-                    </div>
-                </div>
-
-                <div class="service-option featured" data-service="corte-barbaterapia" data-price="75" data-duration="80">
-                    <div class="service-tag">MAIS PEDIDO</div>
-                    <div class="service-radio"><i class="far fa-circle"></i></div>
-                    <div class="service-info">
-                        <div class="service-name">Corte + Barbaterapia</div>
-                        <div class="service-detail">Sobrancelha cortesia</div>
-                    </div>
-                    <div class="service-meta">
-                        <div class="service-price">R$ 75,00</div>
-                        <div class="service-duration"><i class="far fa-clock"></i> 1h20</div>
-                    </div>
-                </div>
-
-                <div class="service-option" data-service="barbaterapia" data-price="43" data-duration="60">
-                    <div class="service-radio"><i class="far fa-circle"></i></div>
-                    <div class="service-info">
-                        <div class="service-name">Barbaterapia</div>
-                        <div class="service-detail">Pezinho cortesia</div>
-                    </div>
-                    <div class="service-meta">
-                        <div class="service-price">R$ 43,00</div>
-                        <div class="service-duration"><i class="far fa-clock"></i> 1h</div>
-                    </div>
-                </div>
-
-                <div class="service-option" data-service="orelha-nariz" data-price="25" data-duration="30">
-                    <div class="service-radio"><i class="far fa-circle"></i></div>
-                    <div class="service-info">
-                        <div class="service-name">Orelha e Nariz com Cera</div>
-                        <div class="service-detail">Remoção com cera</div>
-                    </div>
-                    <div class="service-meta">
-                        <div class="service-price">R$ 25,00</div>
-                        <div class="service-duration"><i class="far fa-clock"></i> 30min</div>
-                    </div>
-                </div>
-
-                <div class="service-option" data-service="selagem" data-price="50" data-duration="60">
-                    <div class="service-radio"><i class="far fa-circle"></i></div>
-                    <div class="service-info">
-                        <div class="service-name">Selagem</div>
-                        <div class="service-detail">Tratamento capilar</div>
-                    </div>
-                    <div class="service-meta">
-                        <div class="service-price">R$ 50,00</div>
-                        <div class="service-duration"><i class="far fa-clock"></i> 1h</div>
-                    </div>
-                </div>
+                <p class="step-subtitle">Carregando serviços...</p>
             </div>
 
             <div class="services-summary" id="services-summary">
@@ -260,6 +178,8 @@
         </button>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    <script src="supabase-config.js"></script>
     <script src="agendar.js"></script>
 </body>
 </html>

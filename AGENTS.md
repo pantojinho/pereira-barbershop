@@ -200,51 +200,101 @@ Quando editar HTML/CSS/logo, faca em **AMBOS** os lugares:
 
 ---
 
+### Sessao 4 — 13/05/2026
+**Agente:** opencode (glm-5.1)
+**Tarefas realizadas:**
+- Criou projeto Supabase (mblmmfvibowclskdzzsf.supabase.co)
+- Criou SQL schema completo: tabelas barbers, services, appointments com RLS
+- Criou `supabase-config.js` com credenciais publicas (anon key)
+- Criou painel administrativo completo (`admin.html`, `admin.css`, `admin.js`):
+  - Login com Supabase Auth (email + senha)
+  - Dashboard com estatisticas (agendamentos hoje, semana, barbeiros ativos, faturamento)
+  - Gerenciamento de barbeiros (CRUD: adicionar, editar horarios, ativar/desativar, excluir)
+  - Gerenciamento de servicos (CRUD: adicionar, editar preco/duracao, ativar/desativar, excluir)
+  - Lista de agendamentos com filtros (barbeiro, status, data) e paginacao
+  - Cancelar e concluir agendamentos
+  - Link WhatsApp direto pelo painel
+  - Gerenciamento de administradores (criar novos via signUp)
+- Atualizou `agendar.js` para usar Supabase:
+  - Barbeiros carregados do banco (ao inves de hardcoded)
+  - Servicos carregados do banco (ao inves de hardcoded)
+  - Verificacao de disponibilidade real (slots ja ocupados no banco)
+  - Agendamentos salvos no banco ao confirmar
+- Atualizou `agendar.html` para incluir Supabase JS Client
+- Atualizou `server.py` para servir novos arquivos (admin.html, admin.css, admin.js, supabase-config.js)
+- Atualizou `.gitignore` para proteger secrets do Supabase
+- Sincronizou todos os arquivos com pasta `static/`
+- Commit e push para o GitHub
+
+**Supabase Config:**
+- Project URL: https://mblmmfvibowclskdzzsf.supabase.co
+- Tabelas: barbers, services, appointments
+- RLS habilitado em todas as tabelas
+- Admin criado: gabrielpantojinho@gmail.com (UID: 31187054-1c5d-496d-99a0-387582d50a0a)
+
+**Arquitetura atualizada:**
+```
+/
+  index.html          <- Landing page
+  style.css           <- Estilos landing
+  agendar.html        <- Pagina de agendamento (carrega dados do Supabase)
+  agendar.css         <- Estilos agendamento
+  agendar.js          <- Logica agendamento (Supabase Client)
+  admin.html          <- Painel administrativo (login + CRUD)
+  admin.css           <- Estilos painel admin
+  admin.js            <- Logica painel admin (Supabase Client)
+  supabase-config.js  <- Config Supabase (URL + anon key)
+  supabase-schema.sql <- SQL para criar tabelas (referencia)
+  logo.png, favicon.svg, vercel.json, server.py, etc.
+  static/             <- Copia para servidor local
+```
+
+**Pendencias:**
+- Implementar notificacoes WhatsApp (Evolution API ou Z-API)
+- Chatbot WhatsApp para agendamento
+- Relatorios (faturamento, clientes recorrentes)
+- Sistema de avaliacao
+
+**Notas:**
+- Nao possui backend separado — tudo via Supabase JS Client direto no frontend
+- A Service Role Key NAO esta no codigo (apenas anon key, que e publica)
+- Para criar o primeiro admin: Supabase Dashboard > Authentication > Add User
+- O schema SQL esta em `supabase-schema.sql` para referencia
+
+---
+
 ### Plano do Sistema Completo (Roadmap)
 
-#### Fase 1 — Atual (Concluida)
+#### Fase 1 — Concluida
 - [x] Landing page funcional no Vercel
 - [x] QR Code real na landing page
 - [x] Pagina de agendamento (frontend)
 
-#### Fase 2 — Backend + Banco de Dados
-- [ ] Configurar Supabase (PostgreSQL + Auth)
-- [ ] Criar tabelas: barbeiros, servicos, agendamentos, usuarios_admin
-- [ ] Backend FastAPI conectado ao Supabase
-- [ ] Substituir dados estaticos por chamadas a API
-- [ ] Deploy do backend (Oracle Cloud Free ou Render Free)
+#### Fase 2 — Concluida
+- [x] Configurar Supabase (PostgreSQL + Auth)
+- [x] Criar tabelas: barbers, services, appointments
+- [x] Supabase JS Client direto no frontend (sem backend separado)
+- [x] Substituir dados estaticos por chamadas ao Supabase
+- [x] Salvar agendamentos no banco de dados
+- [x] Verificar disponibilidade real de horarios
 
-#### Fase 3 — Painel Admin
-- [ ] Tela de login (Supabase Auth)
-- [ ] Dashboard com agenda do dia
-- [ ] Gerenciar barbeiros, servicos, horarios
-- [ ] Historico de agendamentos
-- [ ] Cancelar/reagendar
+#### Fase 3 — Concluida
+- [x] Tela de login (Supabase Auth) — admin.html
+- [x] Dashboard com agenda do dia e estatisticas
+- [x] Gerenciar barbeiros (CRUD completo)
+- [x] Gerenciar servicos (CRUD completo)
+- [x] Gerenciar administradores (criar novos)
+- [x] Historico de agendamentos com filtros
+- [x] Cancelar e concluir agendamentos
+- [x] Link WhatsApp direto pelo painel
 
-#### Fase 4 — WhatsApp
+#### Fase 4 — WhatsApp (Futuro)
 - [ ] Configurar Evolution API (self-hosted) ou Z-API
 - [ ] Notificacao de confirmacao para cliente
 - [ ] Notificacao de novo agendamento para dono
 - [ ] Lembrete 1h antes do horario
-- [ ] Notificacao de cancelamento
 
-#### Fase 5 — Melhorias
+#### Fase 5 — Melhorias (Futuro)
 - [ ] Chatbot WhatsApp para agendamento
 - [ ] Relatorios (faturamento, clientes recorrentes)
 - [ ] Sistema de avaliacao
-
----
-
-<!-- TEMPLATE PARA NOVAS SESSOES
-### Sessao X — DD/MM/AAAA (HH:MM)
-**Agente:** [nome do agente/modelo]
-**Tarefas realizadas:**
-- [item 1]
-- [item 2]
-
-**Pendencias:**
-- [item pendente]
-
-**Notas:**
-- [observacoes uteis para proximos agentes]
--->

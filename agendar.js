@@ -1,10 +1,15 @@
 (function () {
+    'use strict';
+
+    var sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
     var currentStep = 1;
     var totalSteps = 4;
 
     var booking = {
         barber: null,
         barberName: null,
+        barberId: null,
         date: null,
         dateFormatted: null,
         time: null,
@@ -17,24 +22,88 @@
 
     var calendarDate = new Date();
     var selectedDate = null;
-
-    var BARBERS = {
-        rafael: { name: "Rafael", schedule: { start: "09:00", end: "19:00", days: [1, 2, 3, 4, 5, 6] } },
-        gabriel: { name: "Gabriel", schedule: { start: "09:00", end: "19:00", days: [1, 2, 3, 4, 5, 6] } },
-        marcus: { name: "Marcus Vinicius", schedule: { start: "09:00", end: "19:00", days: [1, 2, 3, 4, 5, 6] } },
-    };
-
+    var BARBERS = {};
+    var SERVICES_DB = [];
     var SLOT_INTERVAL = 30;
 
     function $(id) { return document.getElementById(id); }
     function $$(sel) { return document.querySelectorAll(sel); }
 
-    function init() {
-        setupBarbers();
+    async function init() {
+        await loadBarbers();
+        await loadServices();
         setupCalendar();
-        setupServices();
         setupNav();
         updateNavButtons();
+    }
+
+    async function loadBarbers() {
+        try {
+            var result = await sb.from('barbers').select('*').eq('active', true).order('sort_order');
+            var barbers = result.data || [];
+            BARBERS = {};
+            var html = '';
+            barbers.forEach(function (b) {
+                var key = b.id;
+                BARBERS[key] = {
+                    id: b.id,
+                    name: b.name,
+                    schedule: {
+                        start: b.schedule_start,
+                        end: b.schedule_end,
+                        days: b.work_days || []
+                    }
+                };
+                html += '<div class="barber-option" data-barber="' + key + '">' +
+                    '<div class="barber-icon"><i class="fas fa-cut"></i></div>' +
+                    '<div class="barber-info">' +
+                        '<div class="barber-name">' + b.name + '</div>' +
+                        '<div class="barber-desc">Barbeiro</div>' +
+                    '</div>' +
+                    '<div class="barber-check"><i class="fas fa-check-circle"></i></div>' +
+                '</div>';
+            });
+            if (!html) html = '<p class="step-subtitle">Nenhum barbeiro disponível no momento.</p>';
+            $('barber-list').innerHTML = html;
+            setupBarbers();
+        } catch (err) {
+            $('barber-list').innerHTML = '<p class="step-subtitle">Erro ao carregar barbeiros.</p>';
+        }
+    }
+
+    async function loadServices() {
+        try {
+            var result = await sb.from('services').select('*').eq('active', true).order('sort_order');
+            SERVICES_DB = result.data || [];
+            var html = '';
+            SERVICES_DB.forEach(function (s, idx) {
+                var hours = Math.floor(s.duration_min / 60);
+                var mins = s.duration_min % 60;
+                var durationStr = '';
+                if (hours > 0) durationStr += hours + 'h';
+                if (mins > 0) durationStr += (hours > 0 ? '' : '') + mins + 'min';
+
+                var featuredClass = (idx === 1) ? ' featured' : '';
+                var tagHtml = (idx === 1) ? '<div class="service-tag">MAIS PEDIDO</div>' : '';
+
+                html += '<div class="service-option' + featuredClass + '" data-service="' + s.id + '" data-price="' + s.price + '" data-duration="' + s.duration_min + '">' +
+                    tagHtml +
+                    '<div class="service-radio"><i class="far fa-circle"></i></div>' +
+                    '<div class="service-info">' +
+                        '<div class="service-name">' + s.name + '</div>' +
+                    '</div>' +
+                    '<div class="service-meta">' +
+                        '<div class="service-price">R$ ' + Number(s.price).toFixed(2).replace('.', ',') + '</div>' +
+                        '<div class="service-duration"><i class="far fa-clock"></i> ' + durationStr + '</div>' +
+                    '</div>' +
+                '</div>';
+            });
+            if (!html) html = '<p class="step-subtitle">Nenhum serviço disponível no momento.</p>';
+            $('services-list').innerHTML = html;
+            setupServices();
+        } catch (err) {
+            $('services-list').innerHTML = '<p class="step-subtitle">Erro ao carregar serviços.</p>';
+        }
     }
 
     function setupBarbers() {
@@ -43,8 +112,10 @@
             opt.addEventListener("click", function () {
                 options.forEach(function (o) { o.classList.remove("selected"); });
                 opt.classList.add("selected");
-                booking.barber = opt.dataset.barber;
-                booking.barberName = BARBERS[booking.barber].name;
+                var key = opt.dataset.barber;
+                booking.barber = key;
+                booking.barberId = key;
+                booking.barberName = BARBERS[key] ? BARBERS[key].name : key;
                 updateNavButtons();
             });
         });
@@ -124,7 +195,7 @@
         return days[d.getDay()] + ", " + d.getDate() + " " + months[d.getMonth()] + " " + d.getFullYear();
     }
 
-    function renderTimeSlots() {
+    async function renderTimeSlots() {
         if (!selectedDate || !booking.barber) {
             $("time-slots").innerHTML = "";
             $("time-hint").textContent = "Selecione uma data primeiro";
@@ -146,6 +217,23 @@
 
         $("time-hint").textContent = "Horários para " + booking.dateFormatted;
 
+        var bookedSlots = [];
+        try {
+            var result = await sb.from('appointments')
+                .select('appointment_time, total_duration')
+                .eq('barber_id', booking.barberId)
+                .eq('appointment_date', booking.date)
+                .neq('status', 'cancelled');
+            bookedSlots = result.data || [];
+        } catch (e) {}
+
+        var bookedTimes = {};
+        bookedSlots.forEach(function (appt) {
+            var t = appt.appointment_time;
+            if (typeof t === 'string') t = t.substring(0, 5);
+            bookedTimes[t] = true;
+        });
+
         var html = "";
         for (var m = startMin; m <= lastSlotMin; m += SLOT_INTERVAL) {
             var h = Math.floor(m / 60);
@@ -157,12 +245,15 @@
                 var currentMin = now.getHours() * 60 + now.getMinutes();
                 if (m <= currentMin + 30) disabled = true;
             }
+            if (bookedTimes[timeStr]) disabled = true;
 
             var selClass = booking.time === timeStr ? " selected" : "";
             html += '<button class="time-slot' + selClass + (disabled ? " disabled" : "") + '"' +
                 (disabled ? " disabled" : "") +
                 ' data-time="' + timeStr + '">' + timeStr + "</button>";
         }
+
+        if (!html) html = '<p class="step-subtitle" style="padding:20px 0;">Nenhum horário disponível nesta data.</p>';
 
         $("time-slots").innerHTML = html;
 
@@ -324,8 +415,6 @@
     }
 
     function populateSummary() {
-        var barberSchedule = BARBERS[booking.barber] ? BARBERS[booking.barber].schedule : null;
-
         $("sum-barber").textContent = booking.barberName;
         $("sum-date").textContent = booking.dateFormatted;
         $("sum-time").textContent = booking.time;
@@ -333,8 +422,34 @@
         $("sum-total").textContent = "R$ " + booking.totalPrice.toFixed(2).replace(".", ",");
     }
 
-    function submitBooking() {
+    async function submitBooking() {
         if (!validateStep(4)) return;
+
+        var serviceIds = booking.services.map(function (s) { return s.id; });
+        var serviceNames = booking.services.map(function (s) { return s.name; });
+
+        try {
+            var result = await sb.from('appointments').insert({
+                barber_id: booking.barberId,
+                service_ids: serviceIds,
+                service_names: serviceNames,
+                appointment_date: booking.date,
+                appointment_time: booking.time + ':00',
+                client_name: booking.clientName,
+                client_phone: booking.clientPhone,
+                status: 'confirmed',
+                total_price: booking.totalPrice,
+                total_duration: booking.totalDuration
+            });
+
+            if (result.error) {
+                alert('Erro ao salvar agendamento: ' + result.error.message);
+                return;
+            }
+        } catch (err) {
+            alert('Erro de conexão. Tente novamente.');
+            return;
+        }
 
         var confirmation = $("step-confirm");
         var details = $("confirm-details");
