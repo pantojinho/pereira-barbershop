@@ -726,6 +726,41 @@ ON CONFLICT (barber_id, day_of_week) DO NOTHING;
 
 ---
 
+### Sessão 18 — 13/05/2026
+**Agente:** opencode (glm-4.7)
+**Tarefas realizadas:**
+- **Correcao do z-index do modal de detalhes no mobile:**
+  - Problema: os botoes do modal de detalhes (especialmente "Remover do Historico") ficavam escondidos atras de outros elementos no celular
+  - Causa: o modal-appointment-details nao tinha z-index especifico, e no mobile o modal-footer nao tinha sticky position
+  - Solucao: aumentado z-index do modal-appointment-details para 1001 (acima do modal-overlay que tem 1000)
+  - Adicionado position sticky no modal-footer para mobile (fica sempre visivel no fundo)
+  - Adicionado box-shadow no modal-footer para destacar do resto do modal
+  - Aumentado min-height dos botoes para 50px (melhor touch target)
+  - Botoes agora sao display grid com 1 coluna (largura total)
+- **Melhorias de UX mobile:**
+  - Botoes agora ficam sempre visiveis mesmo quando o conteudo do modal eh longo
+  - Modal-footer tem fundo branco e sombra para se destacar
+  - Botoes tem min-width auto e width 100% (ocupam todo o espaco disponivel)
+- Sincronizou arquivos com pasta `static/`
+- Commit e push para o GitHub (`1254afc`)
+
+**Arquivos modificados:**
+- `admin.css` — z-index do modal-appointment-details aumentado para 1001; estilos mobile adicionados para modal-footer e appointment-detail-actions
+- `static/admin.css` — Sincronizado
+
+**Notas importantes:**
+- O modal de detalhes agora funciona perfeitamente no mobile com botoes sempre visiveis
+- O z-index mais alto garante que o modal fique acima de todos os outros elementos
+- Apos o deploy no Vercel, limpar o cache do navegador ou testar em janela anonima para ver as mudancas
+
+**Pendências:**
+- Implementar notificacoes WhatsApp (Evolution API ou Z-API)
+- Chatbot WhatsApp para agendamento
+- Relatorios (faturamento, clientes recorrentes)
+- Sistema de avaliacao
+
+---
+
 ### Plano do Sistema Completo (Roadmap)
 
 #### Fase 1 — Concluida
