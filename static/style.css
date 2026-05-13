@@ -416,6 +416,29 @@ body {
     }
 }
 
+.admin-link {
+    position: fixed;
+    bottom: 12px;
+    right: 12px;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    color: rgba(45, 75, 64, 0.15);
+    text-decoration: none;
+    border-radius: 50%;
+    font-size: 0.7rem;
+    transition: color 0.3s, background 0.3s;
+    z-index: 10;
+}
+
+.admin-link:hover {
+    color: rgba(45, 75, 64, 0.5);
+    background: rgba(45, 75, 64, 0.05);
+}
+
 @media (max-width: 480px) {
     .business-card {
         padding: var(--spacing-md);
@@ -462,6 +485,10 @@ body {
     }
 
     .qr-section {
+        display: none;
+    }
+
+    .admin-link {
         display: none;
     }
 }
