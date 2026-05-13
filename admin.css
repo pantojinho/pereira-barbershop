@@ -958,6 +958,7 @@ body {
 
 .modal-appointment-details {
     max-width: 600px;
+    z-index: 1001;
 }
 
 .appointment-detail-item {
@@ -1467,6 +1468,34 @@ body {
     .modal-footer {
         display: grid;
         grid-template-columns: 1fr;
+    }
+
+    .modal-appointment-details {
+        max-width: 100%;
+        max-height: 85vh;
+    }
+
+    .modal-appointment-details .modal-footer {
+        position: sticky;
+        bottom: 0;
+        background: var(--white);
+        border-top: 2px solid var(--gray-200);
+        padding: 16px;
+        box-shadow: 0 -4px 12px rgba(0,0,0,0.1);
+    }
+
+    .modal-appointment-details .appointment-detail-actions {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+
+    .modal-appointment-details .appointment-detail-actions button {
+        width: 100%;
+        min-width: auto;
+        min-height: 50px;
+        font-size: 0.95rem;
+    }
     }
 
     .toast-container {
