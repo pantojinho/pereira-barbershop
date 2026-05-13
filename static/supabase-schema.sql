@@ -71,6 +71,7 @@ CREATE TABLE IF NOT EXISTS products (
     photo_url TEXT,
     active BOOLEAN NOT NULL DEFAULT true,
     sort_order INTEGER NOT NULL DEFAULT 0,
+    stock INTEGER NOT NULL DEFAULT 0,
     created_at TIMESTAMPTZ DEFAULT now()
 );
 
@@ -255,3 +256,6 @@ CREATE POLICY "Authenticated can update product photos" ON storage.objects
 DROP POLICY IF EXISTS "Authenticated can delete product photos" ON storage.objects;
 CREATE POLICY "Authenticated can delete product photos" ON storage.objects
     FOR DELETE USING (bucket_id = 'product-photos' AND auth.role() = 'authenticated');
+
+-- MIGRATION: Adicionar coluna stock na tabela products
+ALTER TABLE products ADD COLUMN IF NOT EXISTS stock INTEGER NOT NULL DEFAULT 0;

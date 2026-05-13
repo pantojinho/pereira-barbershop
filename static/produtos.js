@@ -83,6 +83,11 @@
 
     function addToCart(id) {
         if (!cart[id]) cart[id] = 0;
+        var p = PRODUCTS_DB.find(function (pr) { return pr.id === id; });
+        if (p && cart[id] >= (p.stock || 0)) {
+            toast('Sem estoque disponível');
+            return;
+        }
         cart[id]++;
         updateProductCards();
         updateCartBadge();
@@ -124,7 +129,9 @@
                     ? '<img src="' + escapeHTML(p.photo_url) + '" alt="' + escapeHTML(p.name) + '" loading="lazy">'
                     : '<div class="product-photo-placeholder"><i class="fas fa-box"></i></div>';
                 var descHtml = p.description ? '<p class="product-desc">' + escapeHTML(p.description) + '</p>' : '';
-                html += '<div class="product-card" data-id="' + p.id + '">' +
+                var outOfStock = p.stock === 0;
+                html += '<div class="product-card' + (outOfStock ? ' out-of-stock' : '') + '" data-id="' + p.id + '">' +
+                    (outOfStock ? '<div class="out-of-stock-badge">Esgotado</div>' : '') +
                     '<div class="product-photo">' + photoHtml + '</div>' +
                     '<div class="product-info">' +
                         '<div class="product-name">' + escapeHTML(p.name) + '</div>' +
@@ -134,7 +141,7 @@
                     '<div class="product-qty">' +
                         '<button class="btn-remove" onclick="ShopApp.removeProduct(\'' + p.id + '\')" style="display:none"><i class="fas fa-minus"></i></button>' +
                         '<span class="qty-value">0</span>' +
-                        '<button onclick="ShopApp.addProduct(\'' + p.id + '\')"><i class="fas fa-plus"></i></button>' +
+                        (outOfStock ? '' : '<button onclick="ShopApp.addProduct(\'' + p.id + '\')"><i class="fas fa-plus"></i></button>') +
                     '</div>' +
                 '</div>';
             });
@@ -193,6 +200,11 @@
 
     function cartPlus(id) {
         if (!cart[id]) cart[id] = 0;
+        var p = PRODUCTS_DB.find(function (pr) { return pr.id === id; });
+        if (p && cart[id] >= (p.stock || 0)) {
+            toast('Sem estoque disponível');
+            return;
+        }
         cart[id]++;
         renderCart();
         updateCartBadge();
@@ -409,6 +421,16 @@
     var style = document.createElement('style');
     style.textContent = '@keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-8px)} 75%{transform:translateX(8px)} }';
     document.head.appendChild(style);
+
+    // ========== TOAST ==========
+
+    function toast(msg) {
+        var el = document.createElement('div');
+        el.textContent = msg;
+        el.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#333;color:#fff;padding:10px 20px;border-radius:8px;font-size:0.9rem;z-index:9999;animation:shake 0.4s ease;';
+        document.body.appendChild(el);
+        setTimeout(function () { el.remove(); }, 2500);
+    }
 
     // ========== API PUBLICA (ShopApp) — chamada via onclick no HTML ==========
 

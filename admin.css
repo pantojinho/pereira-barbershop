@@ -1642,6 +1642,22 @@ body {
     font-size: 1.2rem;
 }
 
+/* ========== STOCK BADGES ========== */
+
+.card-stock {
+    font-size: 0.78rem;
+    font-weight: 600;
+    padding: 4px 8px;
+    border-radius: 6px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 4px;
+}
+.card-stock.stock-ok { background: rgba(45,75,64,0.08); color: #2D4B40; }
+.card-stock.stock-low { background: rgba(255,152,0,0.12); color: #E65100; }
+.card-stock.stock-empty { background: rgba(244,67,54,0.12); color: #C62828; }
+
 /* ========== RESPONSIVE ========== */
 
 @media (max-width: 768px) {

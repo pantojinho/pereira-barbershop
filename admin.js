@@ -1371,6 +1371,7 @@
                 '<div class="card-meta-line">' +
                     '<span class="card-price">' + formatCurrency(p.price) + '</span>' +
                 '</div>' +
+                '<div class="card-stock ' + (p.stock === 0 ? 'stock-empty' : p.stock <= 5 ? 'stock-low' : 'stock-ok') + '">' + (p.stock === 0 ? '<i class="fas fa-exclamation-circle"></i> Esgotado' : '<i class="fas fa-cubes"></i> Estoque: ' + p.stock + ' un.') + '</div>' +
                 '<div class="card-actions">' +
                     '<button class="btn-outline btn-sm" onclick="AdminApp.editProduct(\'' + jsString(p.id) + '\')">Editar</button>' +
                     '<button class="btn-outline btn-sm" onclick="AdminApp.toggleProduct(\'' + jsString(p.id) + '\', ' + !p.active + ')">' + (p.active ? 'Desativar' : 'Ativar') + '</button>' +
@@ -1390,6 +1391,7 @@
         var html = '<div class="form-group"><label>Nome</label><input type="text" id="field-name" value="' + escapeHTML(name) + '" required></div>' +
             '<div class="form-group"><label>Descrição</label><textarea id="field-desc" rows="2" placeholder="Descrição do produto (opcional)">' + escapeHTML(desc) + '</textarea></div>' +
             '<div class="form-group"><label>Preço (R$)</label><input type="number" id="field-price" value="' + price + '" step="0.01" min="0" required></div>' +
+            '<div class="form-group"><label><i class="fas fa-cubes"></i> Estoque</label><input type="number" id="field-stock" value="' + (isEdit ? (product.stock || 0) : 0) + '" min="0" step="1" required><div class="barber-photo-hint">Quantidade disponível (0 = esgotado)</div></div>' +
             '<div class="form-group"><label><i class="fas fa-camera"></i> Foto do Produto</label>' +
                 '<div class="barber-photo-upload-area">' +
                     '<div class="barber-photo-preview" id="product-photo-preview"><i class="fas fa-box"></i></div>' +
@@ -1413,7 +1415,7 @@
                 return;
             }
 
-            var data = { name: newName, description: newDesc || null, price: newPrice };
+            var data = { name: newName, description: newDesc || null, price: newPrice, stock: parseInt($('field-stock').value) || 0 };
 
             var photoFile = $('field-product-photo') && $('field-product-photo').files && $('field-product-photo').files[0] ? $('field-product-photo').files[0] : null;
             var shouldRemovePhoto = $('field-photo-remove') && $('field-photo-remove').value === 'true';

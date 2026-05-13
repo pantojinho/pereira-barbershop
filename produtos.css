@@ -861,3 +861,24 @@ body {
         min-height: 48px;
     }
 }
+
+/* ========== OUT OF STOCK ========== */
+
+.product-card.out-of-stock {
+    opacity: 0.6;
+    position: relative;
+}
+.product-card.out-of-stock .product-qty { display: none; }
+.product-card .out-of-stock-badge {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    background: #C62828;
+    color: white;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
