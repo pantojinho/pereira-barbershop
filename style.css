@@ -418,25 +418,28 @@ body {
 
 .admin-link {
     position: fixed;
-    bottom: 12px;
-    right: 12px;
-    width: 32px;
-    height: 32px;
+    bottom: 16px;
+    right: 16px;
+    padding: 8px 16px;
     display: flex;
     align-items: center;
-    justify-content: center;
-    background: transparent;
-    color: rgba(45, 75, 64, 0.15);
+    gap: 6px;
+    background: rgba(45, 75, 64, 0.08);
+    color: rgba(45, 75, 64, 0.45);
     text-decoration: none;
-    border-radius: 50%;
-    font-size: 0.7rem;
-    transition: color 0.3s, background 0.3s;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    font-family: var(--font-body);
+    letter-spacing: 0.3px;
+    transition: all 0.3s;
     z-index: 10;
+    backdrop-filter: blur(4px);
 }
 
 .admin-link:hover {
-    color: rgba(45, 75, 64, 0.5);
-    background: rgba(45, 75, 64, 0.05);
+    color: #2D4B40;
+    background: rgba(45, 75, 64, 0.15);
 }
 
 @media (max-width: 480px) {
