@@ -35,6 +35,8 @@ body {
     flex-direction: column;
     align-items: center;
     line-height: 1.6;
+    padding-bottom: 92px;
+    -webkit-text-size-adjust: 100%;
 }
 
 .booking-header {
@@ -481,6 +483,7 @@ body {
 
 .service-info {
     flex: 1;
+    min-width: 0;
 }
 
 .service-info .service-name {
@@ -495,6 +498,7 @@ body {
 
 .service-meta {
     text-align: right;
+    flex-shrink: 0;
 }
 
 .service-meta .service-price {
@@ -720,6 +724,7 @@ body {
     justify-content: space-between;
     padding: 16px;
     background: linear-gradient(to top, #EBE5D7 60%, transparent);
+    z-index: 20;
 }
 
 .btn-back,
@@ -766,6 +771,10 @@ body {
 
 /* RESPONSIVE */
 @media (max-width: 768px) {
+    body {
+        background-attachment: scroll;
+    }
+
     .header-brand h1 {
         font-size: 1.1rem;
     }
@@ -799,9 +808,26 @@ body {
     .calendar-days .day {
         font-size: 0.8rem;
     }
+
+    .service-option {
+        align-items: flex-start;
+    }
 }
 
 @media (max-width: 480px) {
+    .booking-header {
+        padding-top: 12px;
+    }
+
+    .header-brand {
+        gap: 10px;
+        margin-bottom: 14px;
+    }
+
+    .header-brand h1 {
+        font-size: 1rem;
+    }
+
     .time-slots {
         grid-template-columns: repeat(3, 1fr);
     }
@@ -810,13 +836,97 @@ body {
         padding: 0 8px 16px;
     }
 
+    .step-label {
+        display: none;
+    }
+
+    .step-line {
+        margin-bottom: 0;
+    }
+
+    .booking-main {
+        padding: 0 12px;
+    }
+
+    .step-title {
+        font-size: 1.25rem;
+    }
+
+    .step-subtitle {
+        font-size: 0.88rem;
+        margin-bottom: 16px;
+    }
+
+    .barber-option,
+    .date-picker,
+    .time-picker,
+    .booking-summary,
+    .confirm-details {
+        border-radius: var(--radius-md);
+    }
+
+    .barber-option {
+        padding: 14px;
+        gap: 12px;
+    }
+
+    .barber-icon {
+        width: 46px;
+        height: 46px;
+    }
+
+    .date-picker,
+    .time-picker {
+        padding: 14px;
+    }
+
+    .calendar-days {
+        gap: 2px;
+    }
+
+    .calendar-days .day {
+        border-radius: var(--radius-sm);
+        min-height: 36px;
+    }
+
+    .time-slot {
+        min-height: 42px;
+    }
+
+    .service-option {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 10px 12px;
+        padding: 14px;
+    }
+
+    .service-meta {
+        grid-column: 2;
+        text-align: left;
+    }
+
+    .services-summary {
+        position: sticky;
+        bottom: 74px;
+        z-index: 10;
+    }
+
     .booking-nav {
         padding: 12px;
+        gap: 10px;
     }
 
     .btn-back,
     .btn-next {
-        padding: 12px 20px;
+        flex: 1;
+        justify-content: center;
+        padding: 12px 14px;
         font-size: 0.9rem;
+        min-height: 46px;
+    }
+
+    .confirm-actions {
+        display: grid;
+        grid-template-columns: 1fr;
     }
 }

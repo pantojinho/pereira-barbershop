@@ -29,6 +29,12 @@
     function $(id) { return document.getElementById(id); }
     function $$(sel) { return document.querySelectorAll(sel); }
 
+    function escapeHTML(value) {
+        return String(value == null ? '' : value).replace(/[&<>"']/g, function (ch) {
+            return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch];
+        });
+    }
+
     async function init() {
         await loadBarbers();
         await loadServices();
@@ -57,7 +63,7 @@
                 html += '<div class="barber-option" data-barber="' + key + '">' +
                     '<div class="barber-icon"><i class="fas fa-cut"></i></div>' +
                     '<div class="barber-info">' +
-                        '<div class="barber-name">' + b.name + '</div>' +
+                        '<div class="barber-name">' + escapeHTML(b.name) + '</div>' +
                         '<div class="barber-desc">Barbeiro</div>' +
                     '</div>' +
                     '<div class="barber-check"><i class="fas fa-check-circle"></i></div>' +
@@ -90,7 +96,7 @@
                     tagHtml +
                     '<div class="service-radio"><i class="far fa-circle"></i></div>' +
                     '<div class="service-info">' +
-                        '<div class="service-name">' + s.name + '</div>' +
+                        '<div class="service-name">' + escapeHTML(s.name) + '</div>' +
                     '</div>' +
                     '<div class="service-meta">' +
                         '<div class="service-price">R$ ' + Number(s.price).toFixed(2).replace('.', ',') + '</div>' +
@@ -116,6 +122,10 @@
                 booking.barber = key;
                 booking.barberId = key;
                 booking.barberName = BARBERS[key] ? BARBERS[key].name : key;
+                booking.date = null;
+                booking.dateFormatted = null;
+                booking.time = null;
+                selectedDate = null;
                 updateNavButtons();
             });
         });
@@ -195,6 +205,32 @@
         return days[d.getDay()] + ", " + d.getDate() + " " + months[d.getMonth()] + " " + d.getFullYear();
     }
 
+    async function getBookedSlots(barberId, date) {
+        try {
+            var rpcResult = await sb.rpc('get_public_booked_slots', {
+                p_barber_id: barberId,
+                p_appointment_date: date
+            });
+            if (!rpcResult.error) return rpcResult.data || [];
+
+            if (!(rpcResult.error.message && rpcResult.error.message.indexOf('Could not find the function') >= 0)) {
+                return [];
+            }
+            console.warn('Supabase booking hardening RPC is missing. Apply supabase-security-hardening.sql.');
+        } catch (e) {}
+
+        try {
+            var result = await sb.from('appointments')
+                .select('appointment_time, total_duration')
+                .eq('barber_id', barberId)
+                .eq('appointment_date', date)
+                .neq('status', 'cancelled');
+            return result.data || [];
+        } catch (e) {
+            return [];
+        }
+    }
+
     async function renderTimeSlots() {
         if (!selectedDate || !booking.barber) {
             $("time-slots").innerHTML = "";
@@ -217,21 +253,19 @@
 
         $("time-hint").textContent = "Horários para " + booking.dateFormatted;
 
-        var bookedSlots = [];
-        try {
-            var result = await sb.from('appointments')
-                .select('appointment_time, total_duration')
-                .eq('barber_id', booking.barberId)
-                .eq('appointment_date', booking.date)
-                .neq('status', 'cancelled');
-            bookedSlots = result.data || [];
-        } catch (e) {}
+        var bookedSlots = await getBookedSlots(booking.barberId, booking.date);
 
         var bookedTimes = {};
         bookedSlots.forEach(function (appt) {
             var t = appt.appointment_time;
             if (typeof t === 'string') t = t.substring(0, 5);
-            bookedTimes[t] = true;
+            var durationMin = Number(appt.total_duration || SLOT_INTERVAL);
+            var parts = t.split(':');
+            var bookedStart = parseInt(parts[0]) * 60 + parseInt(parts[1]);
+            var bookedEnd = bookedStart + durationMin;
+            for (var busy = bookedStart; busy < bookedEnd; busy += SLOT_INTERVAL) {
+                bookedTimes[String(Math.floor(busy / 60)).padStart(2, '0') + ':' + String(busy % 60).padStart(2, '0')] = true;
+            }
         });
 
         var html = "";
@@ -245,7 +279,10 @@
                 var currentMin = now.getHours() * 60 + now.getMinutes();
                 if (m <= currentMin + 30) disabled = true;
             }
-            if (bookedTimes[timeStr]) disabled = true;
+            for (var check = m; check < m + duration; check += SLOT_INTERVAL) {
+                var checkTime = String(Math.floor(check / 60)).padStart(2, '0') + ':' + String(check % 60).padStart(2, '0');
+                if (bookedTimes[checkTime]) disabled = true;
+            }
 
             var selClass = booking.time === timeStr ? " selected" : "";
             html += '<button class="time-slot' + selClass + (disabled ? " disabled" : "") + '"' +
@@ -422,26 +459,43 @@
         $("sum-total").textContent = "R$ " + booking.totalPrice.toFixed(2).replace(".", ",");
     }
 
+    async function createBooking(serviceIds) {
+        var rpcResult = await sb.rpc('create_public_appointment', {
+            p_barber_id: booking.barberId,
+            p_service_ids: serviceIds,
+            p_appointment_date: booking.date,
+            p_appointment_time: booking.time + ':00',
+            p_client_name: booking.clientName,
+            p_client_phone: booking.clientPhone
+        });
+
+        if (!rpcResult.error) return rpcResult;
+
+        if (!(rpcResult.error.message && rpcResult.error.message.indexOf('Could not find the function') >= 0)) {
+            return rpcResult;
+        }
+
+        console.warn('Supabase booking hardening RPC is missing. Apply supabase-security-hardening.sql.');
+        return sb.from('appointments').insert({
+            barber_id: booking.barberId,
+            service_ids: serviceIds,
+            service_names: booking.services.map(function (s) { return s.name; }),
+            appointment_date: booking.date,
+            appointment_time: booking.time + ':00',
+            client_name: booking.clientName,
+            client_phone: booking.clientPhone,
+            status: 'confirmed',
+            total_price: booking.totalPrice,
+            total_duration: booking.totalDuration
+        });
+    }
+
     async function submitBooking() {
         if (!validateStep(4)) return;
 
         var serviceIds = booking.services.map(function (s) { return s.id; });
-        var serviceNames = booking.services.map(function (s) { return s.name; });
-
         try {
-            var result = await sb.from('appointments').insert({
-                barber_id: booking.barberId,
-                service_ids: serviceIds,
-                service_names: serviceNames,
-                appointment_date: booking.date,
-                appointment_time: booking.time + ':00',
-                client_name: booking.clientName,
-                client_phone: booking.clientPhone,
-                status: 'confirmed',
-                total_price: booking.totalPrice,
-                total_duration: booking.totalDuration
-            });
-
+            var result = await createBooking(serviceIds);
             if (result.error) {
                 alert('Erro ao salvar agendamento: ' + result.error.message);
                 return;
@@ -455,22 +509,22 @@
         var details = $("confirm-details");
 
         details.innerHTML =
-            '<div class="summary-item"><i class="fas fa-user"></i><span>' + booking.barberName + '</span></div>' +
-            '<div class="summary-item"><i class="fas fa-calendar"></i><span>' + booking.dateFormatted + '</span></div>' +
-            '<div class="summary-item"><i class="fas fa-clock"></i><span>' + booking.time + '</span></div>' +
-            '<div class="summary-item"><i class="fas fa-cut"></i><span>' + booking.services.map(function (s) { return s.name; }).join(", ") + '</span></div>' +
+            '<div class="summary-item"><i class="fas fa-user"></i><span>' + escapeHTML(booking.barberName) + '</span></div>' +
+            '<div class="summary-item"><i class="fas fa-calendar"></i><span>' + escapeHTML(booking.dateFormatted) + '</span></div>' +
+            '<div class="summary-item"><i class="fas fa-clock"></i><span>' + escapeHTML(booking.time) + '</span></div>' +
+            '<div class="summary-item"><i class="fas fa-cut"></i><span>' + escapeHTML(booking.services.map(function (s) { return s.name; }).join(", ")) + '</span></div>' +
             '<div class="summary-item total"><i class="fas fa-money-bill-wave"></i><span>R$ ' + booking.totalPrice.toFixed(2).replace(".", ",") + '</span></div>';
 
-        var msg = "Olá! Acabei de agendar pelo site:%0A" +
-            "%0A*" + booking.barberName + "*" +
-            "%0A📅 " + booking.dateFormatted +
-            "%0A🕐 " + booking.time +
-            "%0A✂ " + booking.services.map(function (s) { return s.name; }).join(", ") +
-            "%0A💰 R$ " + booking.totalPrice.toFixed(2).replace(".", ",") +
-            "%0A%0ANome: " + booking.clientName +
-            "%0ATel: " + booking.clientPhone;
+        var msg = "Olá! Acabei de agendar pelo site:\n" +
+            "\n*" + booking.barberName + "*" +
+            "\nData: " + booking.dateFormatted +
+            "\nHorário: " + booking.time +
+            "\nServiço: " + booking.services.map(function (s) { return s.name; }).join(", ") +
+            "\nTotal: R$ " + booking.totalPrice.toFixed(2).replace(".", ",") +
+            "\n\nNome: " + booking.clientName +
+            "\nTel: " + booking.clientPhone;
 
-        $("btn-whatsapp-confirm").href = "https://wa.me/5515981311623?text=" + msg;
+        $("btn-whatsapp-confirm").href = "https://wa.me/5515981311623?text=" + encodeURIComponent(msg);
 
         $$(".step-content").forEach(function (s) { s.classList.remove("active"); });
         confirmation.classList.add("active");

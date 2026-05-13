@@ -9,6 +9,19 @@
     function qs(sel) { return document.querySelector(sel); }
     function qsa(sel) { return document.querySelectorAll(sel); }
 
+    function escapeHTML(value) {
+        return String(value == null ? '' : value).replace(/[&<>"']/g, function (ch) {
+            return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch];
+        });
+    }
+
+    function jsString(value) {
+        return String(value == null ? '' : value)
+            .replace(/\\/g, '\\\\')
+            .replace(/'/g, "\\'")
+            .replace(/\r?\n/g, ' ');
+    }
+
     function formatDate(dateStr) {
         var d = new Date(dateStr + 'T00:00:00');
         var days = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab'];
@@ -102,6 +115,13 @@
         try {
             var result = await sb.auth.signInWithPassword({ email: email, password: password });
             if (result.error) throw result.error;
+            var allowed = await verifyAdminAccess();
+            if (!allowed) {
+                await sb.auth.signOut();
+                errEl.textContent = 'Seu usuário não tem permissão de administrador.';
+                errEl.style.display = 'block';
+                return;
+            }
             showAdminPanel(result.data.user);
         } catch (err) {
             errEl.textContent = err.message || 'Email ou senha incorretos.';
@@ -120,11 +140,31 @@
     async function checkSession() {
         var result = await sb.auth.getSession();
         if (result.data && result.data.session) {
-            showAdminPanel(result.data.session.user);
+            var allowed = await verifyAdminAccess();
+            if (allowed) {
+                showAdminPanel(result.data.session.user);
+            } else {
+                await sb.auth.signOut();
+                $('login-screen').style.display = 'flex';
+                $('admin-panel').style.display = 'none';
+            }
         } else {
             $('login-screen').style.display = 'flex';
             $('admin-panel').style.display = 'none';
         }
+    }
+
+    async function verifyAdminAccess() {
+        var result = await sb.rpc('is_current_admin');
+        if (!result.error) return result.data === true;
+
+        // Compatibility while the security SQL has not been applied yet.
+        // Real authorization must be enforced by the RLS policies in Supabase.
+        if (result.error.message && result.error.message.indexOf('Could not find the function') >= 0) {
+            console.warn('Supabase admin hardening RPC is missing. Apply supabase-security-hardening.sql.');
+            return true;
+        }
+        return false;
     }
 
     function showAdminPanel(user) {
@@ -154,12 +194,13 @@
     async function loadDashboard() {
         var today = todayStr();
         var week = getWeekRange();
+        var dashboardBarber = $('dashboard-barber') ? $('dashboard-barber').value : '';
         $('dashboard-date').textContent = formatDate(today);
 
         try {
             var todayAppts = await sb.from('appointments').select('*, barber:barbers(name)').eq('appointment_date', today).neq('status', 'cancelled');
             var weekAppts = await sb.from('appointments').select('id').gte('appointment_date', week.start).lte('appointment_date', week.end).neq('status', 'cancelled');
-            var barbers = await sb.from('barbers').select('id').eq('active', true);
+            var barbers = await sb.from('barbers').select('id, name').eq('active', true).order('sort_order').order('name');
 
             $('stat-today').textContent = todayAppts.data ? todayAppts.data.length : 0;
             $('stat-week').textContent = weekAppts.data ? weekAppts.data.length : 0;
@@ -171,10 +212,45 @@
             }
             $('stat-revenue').textContent = formatCurrency(revenue);
 
-            renderAppointmentsList('dashboard-appointments', todayAppts.data || [], true);
+            renderDashboardBarberSummary(barbers.data || [], todayAppts.data || [], dashboardBarber);
+
+            var visibleAppointments = todayAppts.data || [];
+            if (dashboardBarber) {
+                visibleAppointments = visibleAppointments.filter(function (a) { return a.barber_id === dashboardBarber; });
+            }
+            renderAppointmentsList('dashboard-appointments', visibleAppointments, true);
         } catch (err) {
             $('dashboard-appointments').innerHTML = '<p class="empty-state">Erro ao carregar dashboard.</p>';
         }
+    }
+
+    function renderDashboardBarberSummary(barbers, appointments, selectedBarber) {
+        var container = $('dashboard-barber-summary');
+        if (!container) return;
+
+        if (!barbers.length) {
+            container.innerHTML = '';
+            return;
+        }
+
+        container.innerHTML = barbers.map(function (barber) {
+            var items = appointments.filter(function (a) { return a.barber_id === barber.id; });
+            items.sort(function (a, b) { return String(a.appointment_time).localeCompare(String(b.appointment_time)); });
+            var next = items.length ? formatTime(items[0].appointment_time) : '--:--';
+            return '<button type="button" class="barber-agenda-card ' + (selectedBarber === barber.id ? 'active' : '') + '" data-barber-id="' + barber.id + '">' +
+                '<span class="barber-agenda-name">' + escapeHTML(barber.name) + '</span>' +
+                '<strong>' + items.length + '</strong>' +
+                '<span class="barber-agenda-meta">' + (items.length ? 'Próximo: ' + next : 'Sem agenda hoje') + '</span>' +
+            '</button>';
+        }).join('');
+
+        qsa('.barber-agenda-card').forEach(function (card) {
+            card.addEventListener('click', function () {
+                var id = this.getAttribute('data-barber-id');
+                $('dashboard-barber').value = selectedBarber === id ? '' : id;
+                loadDashboard();
+            });
+        });
     }
 
     // ========== APPOINTMENTS ==========
@@ -215,7 +291,7 @@
 
         container.innerHTML = appointments.map(function (a) {
             var statusClass = 'status-' + a.status;
-            var statusLabel = { confirmed: 'Confirmado', pending: 'Pendente', cancelled: 'Cancelado', completed: 'Concluido' }[a.status] || a.status;
+            var statusLabel = { confirmed: 'Confirmado', pending: 'Pendente', cancelled: 'Cancelado', completed: 'Concluído' }[a.status] || a.status;
             var barberName = a.barber ? a.barber.name : 'Barbeiro';
             var services = (a.service_names || []).join(', ');
             var dateLabel = isSimple ? '' : '<span>' + formatDate(a.appointment_date) + '</span>';
@@ -223,11 +299,11 @@
             var actions = '';
             if (!isSimple) {
                 if (a.status === 'confirmed' || a.status === 'pending') {
-                    actions += '<button class="btn-icon success" onclick="AdminApp.completeAppointment(\'' + a.id + '\')" title="Concluir">&#10003;</button>';
-                    actions += '<button class="btn-icon danger" onclick="AdminApp.cancelAppointment(\'' + a.id + '\')" title="Cancelar">&#10007;</button>';
+                    actions += '<button class="btn-icon success" onclick="AdminApp.completeAppointment(\'' + jsString(a.id) + '\')" title="Concluir">&#10003;</button>';
+                    actions += '<button class="btn-icon danger" onclick="AdminApp.cancelAppointment(\'' + jsString(a.id) + '\')" title="Cancelar">&#10007;</button>';
                 }
                 if (a.status === 'confirmed') {
-                    actions += '<button class="btn-icon" onclick="AdminApp.openWhatsApp(\'' + a.client_phone + '\', \'' + encodeURIComponent(a.client_name) + '\')" title="WhatsApp">&#128172;</button>';
+                    actions += '<button class="btn-icon" onclick="AdminApp.openWhatsApp(\'' + jsString(a.client_phone) + '\', \'' + jsString(a.client_name) + '\')" title="WhatsApp">&#128172;</button>';
                 }
             }
 
@@ -235,16 +311,16 @@
                 '<div class="appointment-info">' +
                     '<div class="appointment-time-badge">' + formatTime(a.appointment_time) + '</div>' +
                     '<div class="appointment-details">' +
-                        '<div class="appointment-client">' + a.client_name + '</div>' +
+                        '<div class="appointment-client">' + escapeHTML(a.client_name) + '</div>' +
                         '<div class="appointment-meta">' +
-                            '<span>&#9998; ' + barberName + '</span>' +
-                            '<span>' + services + '</span>' +
+                            '<span>&#9998; ' + escapeHTML(barberName) + '</span>' +
+                            '<span>' + escapeHTML(services) + '</span>' +
                             dateLabel +
                         '</div>' +
                     '</div>' +
                 '</div>' +
                 '<div class="appointment-actions">' +
-                    '<span class="status-badge ' + statusClass + '">' + statusLabel + '</span>' +
+                    '<span class="status-badge ' + statusClass + '">' + escapeHTML(statusLabel) + '</span>' +
                     actions +
                 '</div>' +
             '</div>';
@@ -293,7 +369,7 @@
         if (result.error) {
             toast('Erro: ' + result.error.message, 'error');
         } else {
-            toast('Agendamento concluido.', 'success');
+            toast('Agendamento concluído.', 'success');
             loadDashboard();
             loadAppointments(currentPage);
         }
@@ -302,7 +378,8 @@
     function openWhatsApp(phone, name) {
         var clean = phone.replace(/\D/g, '');
         if (!clean.startsWith('55')) clean = '55' + clean;
-        window.open('https://wa.me/' + clean + '?text=Olá! Sou da Pereira\'s Barber Shop.', '_blank');
+        var text = 'Olá! Sou da Pereira\'s Barber Shop.';
+        window.open('https://wa.me/' + clean + '?text=' + encodeURIComponent(text), '_blank');
     }
 
     // ========== BARBERS CRUD ==========
@@ -316,9 +393,19 @@
             var currentVal = filterSelect.value;
             filterSelect.innerHTML = '<option value="">Todos os barbeiros</option>';
             (result.data || []).forEach(function (b) {
-                filterSelect.innerHTML += '<option value="' + b.id + '">' + b.name + '</option>';
+                filterSelect.innerHTML += '<option value="' + escapeHTML(b.id) + '">' + escapeHTML(b.name) + '</option>';
             });
             filterSelect.value = currentVal;
+
+            var dashboardSelect = $('dashboard-barber');
+            if (dashboardSelect) {
+                var currentDashboardVal = dashboardSelect.value;
+                dashboardSelect.innerHTML = '<option value="">Todos os barbeiros</option>';
+                (result.data || []).filter(function (b) { return b.active; }).forEach(function (b) {
+                    dashboardSelect.innerHTML += '<option value="' + escapeHTML(b.id) + '">' + escapeHTML(b.name) + '</option>';
+                });
+                dashboardSelect.value = currentDashboardVal;
+            }
         } catch (err) {
             $('barbers-list').innerHTML = '<p class="empty-state">Erro ao carregar barbeiros.</p>';
         }
@@ -336,13 +423,13 @@
             var badgeText = b.active ? 'Ativo' : 'Inativo';
             return '<div class="manage-card ' + (b.active ? '' : 'inactive') + '">' +
                 '<span class="card-badge ' + badgeClass + '">' + badgeText + '</span>' +
-                '<h4>' + b.name + '</h4>' +
+                '<h4>' + escapeHTML(b.name) + '</h4>' +
                 '<div class="card-detail">&#128336; ' + formatTime(b.schedule_start) + ' - ' + formatTime(b.schedule_end) + '</div>' +
                 '<div class="card-detail">&#128197; ' + days + '</div>' +
                 '<div class="card-actions">' +
-                    '<button class="btn-outline btn-sm" onclick="AdminApp.editBarber(\'' + b.id + '\')">Editar</button>' +
-                    '<button class="btn-outline btn-sm" onclick="AdminApp.toggleBarber(\'' + b.id + '\', ' + !b.active + ')">' + (b.active ? 'Desativar' : 'Ativar') + '</button>' +
-                    '<button class="btn-outline btn-sm btn-danger" onclick="AdminApp.deleteBarber(\'' + b.id + '\')">Excluir</button>' +
+                    '<button class="btn-outline btn-sm" onclick="AdminApp.editBarber(\'' + jsString(b.id) + '\')">Editar</button>' +
+                    '<button class="btn-outline btn-sm" onclick="AdminApp.toggleBarber(\'' + jsString(b.id) + '\', ' + !b.active + ')">' + (b.active ? 'Desativar' : 'Ativar') + '</button>' +
+                    '<button class="btn-outline btn-sm btn-danger" onclick="AdminApp.deleteBarber(\'' + jsString(b.id) + '\')">Excluir</button>' +
                 '</div>' +
             '</div>';
         }).join('');
@@ -362,9 +449,9 @@
             daysHTML += '<label class="work-day-option"><input type="checkbox" name="work_day" value="' + d + '" ' + checked + '> ' + DAY_NAMES[d] + '</label>';
         }
 
-        var html = '<div class="form-group"><label>Nome</label><input type="text" id="field-name" value="' + name + '" required></div>' +
-            '<div class="form-group"><label>Horario Inicio</label><input type="time" id="field-start" value="' + start + '"></div>' +
-            '<div class="form-group"><label>Horario Fim</label><input type="time" id="field-end" value="' + end + '"></div>' +
+        var html = '<div class="form-group"><label>Nome</label><input type="text" id="field-name" value="' + escapeHTML(name) + '" required></div>' +
+            '<div class="form-group"><label>Horário Início</label><input type="time" id="field-start" value="' + start + '"></div>' +
+            '<div class="form-group"><label>Horário Fim</label><input type="time" id="field-end" value="' + end + '"></div>' +
             '<div class="form-group"><label>Dias de Trabalho</label><div class="work-days-grid">' + daysHTML + '</div></div>';
 
         showModal(title, html, async function () {
@@ -462,13 +549,13 @@
 
             return '<div class="manage-card ' + (s.active ? '' : 'inactive') + '">' +
                 '<span class="card-badge ' + badgeClass + '">' + badgeText + '</span>' +
-                '<h4>' + s.name + '</h4>' +
+                '<h4>' + escapeHTML(s.name) + '</h4>' +
                 '<div class="card-price">' + formatCurrency(s.price) + '</div>' +
                 '<div class="card-detail">&#9202; ' + duration + '</div>' +
                 '<div class="card-actions">' +
-                    '<button class="btn-outline btn-sm" onclick="AdminApp.editService(\'' + s.id + '\')">Editar</button>' +
-                    '<button class="btn-outline btn-sm" onclick="AdminApp.toggleService(\'' + s.id + '\', ' + !s.active + ')">' + (s.active ? 'Desativar' : 'Ativar') + '</button>' +
-                    '<button class="btn-outline btn-sm btn-danger" onclick="AdminApp.deleteService(\'' + s.id + '\')">Excluir</button>' +
+                    '<button class="btn-outline btn-sm" onclick="AdminApp.editService(\'' + jsString(s.id) + '\')">Editar</button>' +
+                    '<button class="btn-outline btn-sm" onclick="AdminApp.toggleService(\'' + jsString(s.id) + '\', ' + !s.active + ')">' + (s.active ? 'Desativar' : 'Ativar') + '</button>' +
+                    '<button class="btn-outline btn-sm btn-danger" onclick="AdminApp.deleteService(\'' + jsString(s.id) + '\')">Excluir</button>' +
                 '</div>' +
             '</div>';
         }).join('');
@@ -476,12 +563,12 @@
 
     function showServiceForm(service) {
         var isEdit = !!service;
-        var title = isEdit ? 'Editar Servico' : 'Novo Servico';
+        var title = isEdit ? 'Editar Serviço' : 'Novo Serviço';
         var name = isEdit ? service.name : '';
         var price = isEdit ? service.price : '';
         var duration = isEdit ? service.duration_min : 60;
 
-        var html = '<div class="form-group"><label>Nome</label><input type="text" id="field-name" value="' + name + '" required></div>' +
+        var html = '<div class="form-group"><label>Nome</label><input type="text" id="field-name" value="' + escapeHTML(name) + '" required></div>' +
             '<div class="form-group"><label>Preco (R$)</label><input type="number" id="field-price" value="' + price + '" step="0.01" min="0" required></div>' +
             '<div class="form-group"><label>Duracao (minutos)</label><input type="number" id="field-duration" value="' + duration + '" min="15" step="15" required></div>';
 
@@ -511,7 +598,7 @@
                 toast('Erro: ' + result.error.message, 'error');
             } else {
                 hideModal();
-                toast(isEdit ? 'Servico atualizado!' : 'Servico adicionado!', 'success');
+                toast(isEdit ? 'Serviço atualizado!' : 'Serviço adicionado!', 'success');
                 loadServices();
             }
         });
@@ -527,18 +614,18 @@
         if (result.error) {
             toast('Erro: ' + result.error.message, 'error');
         } else {
-            toast(active ? 'Servico ativado!' : 'Servico desativado.', 'success');
+            toast(active ? 'Serviço ativado!' : 'Serviço desativado.', 'success');
             loadServices();
         }
     }
 
     function deleteService(id) {
-        showConfirm('Excluir Servico', 'Tem certeza que deseja excluir este servico?', async function () {
+        showConfirm('Excluir Serviço', 'Tem certeza que deseja excluir este serviço?', async function () {
             var result = await sb.from('services').delete().eq('id', id);
             if (result.error) {
                 toast('Erro: ' + result.error.message, 'error');
             } else {
-                toast('Servico excluido.', 'success');
+                toast('Serviço excluído.', 'success');
                 loadServices();
             }
         });
@@ -557,38 +644,23 @@
 
             container.innerHTML = '<div class="admin-card">' +
                 '<div class="admin-card-info">' +
-                    '<div class="admin-avatar">' + currentEmail.charAt(0).toUpperCase() + '</div>' +
-                    '<div><div class="admin-name">' + currentEmail + '</div><div class="admin-role">Admin Principal</div></div>' +
+                    '<div class="admin-avatar">' + escapeHTML(currentEmail.charAt(0).toUpperCase()) + '</div>' +
+                    '<div><div class="admin-name">' + escapeHTML(currentEmail) + '</div><div class="admin-role">Admin autorizado</div></div>' +
                 '</div>' +
                 '<span class="status-badge status-confirmed">Ativo</span>' +
             '</div>' +
-            '<p class="empty-state" style="margin-top:24px;font-size:0.8rem;">Para adicionar novos administradores, use o botao abaixo. Eles receberao um email para definir a senha.</p>';
+            '<p class="empty-state" style="margin-top:24px;font-size:0.8rem;">Novos administradores devem ser criados pelo Supabase Dashboard e liberados na tabela admins.</p>';
         } catch (err) {
             $('admins-list').innerHTML = '<p class="empty-state">Erro ao carregar administradores.</p>';
         }
     }
 
     function showAddAdminForm() {
-        var html = '<div class="form-group"><label>Email</label><input type="email" id="field-email" placeholder="novo@admin.com" required></div>' +
-            '<div class="form-group"><label>Senha</label><input type="password" id="field-password" placeholder="Minimo 6 caracteres" required></div>';
+        var html = '<p class="empty-state" style="padding:8px 0;text-align:left;color:var(--gray-600);">Por segurança, este painel não cria usuários pelo navegador. Crie o usuário em Authentication &gt; Users no Supabase e depois rode o insert na tabela <strong>admins</strong> usando o UID criado.</p>' +
+            '<pre class="code-snippet">insert into public.admins (user_id, email)\nvalues (\'UID_DO_USUARIO\', \'email@exemplo.com\');</pre>';
 
-        showModal('Novo Administrador', html, async function () {
-            var email = $('field-email').value.trim();
-            var password = $('field-password').value;
-
-            if (!email || !password || password.length < 6) {
-                toast('Email e senha (minimo 6 caracteres) sao obrigatorios.', 'error');
-                return;
-            }
-
-            var result = await sb.auth.signUp({ email: email, password: password });
-            if (result.error) {
-                toast('Erro: ' + result.error.message, 'error');
-            } else {
-                hideModal();
-                toast('Admin criado! Ele pode fazer login agora.', 'success');
-                loadAdmins();
-            }
+        showModal('Novo Administrador', html, function () {
+            hideModal();
         });
     }
 
@@ -621,6 +693,7 @@
         $('btn-add-admin').addEventListener('click', showAddAdminForm);
 
         $('filter-barber').addEventListener('change', function () { loadAppointments(1); });
+        $('dashboard-barber').addEventListener('change', function () { loadDashboard(); });
         $('filter-status').addEventListener('change', function () { loadAppointments(1); });
         $('filter-date').addEventListener('change', function () { loadAppointments(1); });
         $('btn-clear-filters').addEventListener('click', function () {

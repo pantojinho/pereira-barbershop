@@ -44,6 +44,7 @@ body {
     justify-content: center;
     padding: var(--spacing-md);
     line-height: 1.6;
+    -webkit-text-size-adjust: 100%;
 }
 
 .business-card {
@@ -118,6 +119,30 @@ body {
     gap: var(--spacing-md);
     flex-wrap: wrap;
     justify-content: center;
+}
+
+.booking-cta {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    min-height: 48px;
+    margin-top: var(--spacing-lg);
+    padding: 14px 24px;
+    border-radius: 999px;
+    background: var(--green-primary);
+    color: white;
+    font-weight: 800;
+    text-decoration: none;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    box-shadow: var(--shadow-md);
+    transition: background-color 0.2s ease, transform 0.2s ease;
+}
+
+.booking-cta:hover {
+    background: var(--green-hover);
+    transform: translateY(-2px);
 }
 
 .premium-badge,
@@ -251,6 +276,18 @@ body {
     background-color: white;
 }
 
+.qr-code a,
+.qr-code img {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+.qr-code img {
+    object-fit: contain;
+    padding: 8px;
+}
+
 .qr-placeholder {
     width: 100%;
     height: 100%;
@@ -286,6 +323,15 @@ body {
 .scan-arrow {
     color: var(--green-primary);
     font-size: 1.5rem;
+}
+
+.scan-arrow a {
+    color: inherit;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 44px;
+    min-height: 44px;
 }
 
 .footer {
@@ -357,6 +403,8 @@ body {
 @media (max-width: 768px) {
     body {
         padding: var(--spacing-sm);
+        justify-content: flex-start;
+        background-attachment: scroll;
     }
 
     .business-card {
@@ -386,6 +434,10 @@ body {
         text-align: center;
     }
 
+    .booking-cta {
+        width: 100%;
+    }
+
     .qr-section {
         flex-direction: column;
         text-align: center;
@@ -402,6 +454,7 @@ body {
     }
 
     .contact-item {
+        flex-direction: column;
         align-items: center;
         text-align: center;
     }
@@ -463,6 +516,7 @@ body {
     }
 
     .contact-item {
+        flex-direction: column;
         align-items: center;
         text-align: center;
     }

@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin — Pereira's Barber Shop</title>
+    <title>Admin - Pereira's Barber Shop</title>
     <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
@@ -58,7 +59,7 @@
             <button class="nav-tab active" data-tab="dashboard">Dashboard</button>
             <button class="nav-tab" data-tab="appointments">Agendamentos</button>
             <button class="nav-tab" data-tab="barbers">Barbeiros</button>
-            <button class="nav-tab" data-tab="services">Servicos</button>
+            <button class="nav-tab" data-tab="services">Serviços</button>
             <button class="nav-tab" data-tab="admins">Administradores</button>
         </nav>
 
@@ -87,9 +88,17 @@
                 </div>
 
                 <div class="section-header">
-                    <h3>Agenda de Hoje</h3>
-                    <span id="dashboard-date" class="section-subtitle"></span>
+                    <div>
+                        <h3>Agenda de Hoje</h3>
+                        <span id="dashboard-date" class="section-subtitle"></span>
+                    </div>
+                    <div class="filter-group dashboard-filter">
+                        <select id="dashboard-barber">
+                            <option value="">Todos os barbeiros</option>
+                        </select>
+                    </div>
                 </div>
+                <div id="dashboard-barber-summary" class="barber-agenda-grid"></div>
                 <div id="dashboard-appointments" class="appointment-list">
                     <p class="empty-state">Carregando...</p>
                 </div>
@@ -108,7 +117,7 @@
                             <option value="confirmed">Confirmado</option>
                             <option value="pending">Pendente</option>
                             <option value="cancelled">Cancelado</option>
-                            <option value="completed">Concluido</option>
+                            <option value="completed">Concluído</option>
                         </select>
                         <input type="date" id="filter-date" placeholder="Filtrar por data">
                         <button id="btn-clear-filters" class="btn-outline btn-sm">Limpar</button>
@@ -134,8 +143,8 @@
             <!-- TAB: SERVICOS -->
             <section id="tab-services" class="tab-panel">
                 <div class="section-header">
-                    <h3>Gerenciar Servicos</h3>
-                    <button id="btn-add-service" class="btn-primary btn-sm">+ Novo Servico</button>
+                    <h3>Gerenciar Serviços</h3>
+                    <button id="btn-add-service" class="btn-primary btn-sm">+ Novo Serviço</button>
                 </div>
                 <div id="services-list" class="card-grid">
                     <p class="empty-state">Carregando...</p>
