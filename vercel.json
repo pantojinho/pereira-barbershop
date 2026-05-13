@@ -1,25 +1,6 @@
 {
-  "version": 2,
-  "builds": [
-    {
-      "src": "server.py",
-      "use": "@vercel/python"
-    }
-  ],
-  "routes": [
-    {
-      "src": "/static/(.*)",
-      "dest": "/static/$1",
-      "headers": {
-        "cache-control": "public, max-age=31536000, immutable"
-      }
-    },
-    {
-      "src": "/(.*)",
-      "dest": "server.py"
-    }
-  ],
-  "env": {
-    "PYTHON_VERSION": "3.11"
-  }
+  "buildCommand": null,
+  "outputDirectory": "static",
+  "cleanUrls": true,
+  "trailingSlash": false
 }
