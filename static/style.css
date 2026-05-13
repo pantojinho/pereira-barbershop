@@ -100,106 +100,25 @@ body {
     text-align: center;
 }
 
-.header-brand {
-    width: 100%;
-    margin-bottom: var(--spacing-lg);
-}
-
-.logo {
-    font-family: 'Playfair Display', serif;
-    font-size: 4.5rem;
-    font-weight: 900;
-    color: var(--green-primary);
-    margin-bottom: var(--spacing-xs);
-    letter-spacing: -2px;
-    text-transform: uppercase;
-    line-height: 1;
-    text-shadow: 2px 2px 0 rgba(45, 75, 64, 0.1);
-}
-
-.shop-name {
-    font-family: 'Inter', sans-serif;
-    font-size: 2rem;
-    font-weight: 700;
-    color: var(--green-primary);
-    letter-spacing: 8px;
-    text-transform: uppercase;
-    position: relative;
-    display: inline-block;
-}
-
-.shop-name::before,
-.shop-name::after {
-    content: '';
-    position: absolute;
-    top: 50%;
-    width: 20px;
-    height: 1px;
-    background-color: var(--green-primary);
-}
-
-.shop-name::before {
-    left: -25px;
-}
-
-.shop-name::after {
-    right: -25px;
-}
-
-/* Illustration Container */
-.illustration-container {
+/* Logo Image Container */
+.logo-image-container {
     position: relative;
     margin-bottom: var(--spacing-xl);
     display: flex;
     justify-content: center;
-}
-
-.illustration {
-    width: 280px;
-    height: 280px;
-    position: relative;
-    z-index: 1;
-}
-
-.illustration svg {
-    width: 100%;
-    height: 100%;
-    fill: none;
-    stroke: var(--green-primary);
-    stroke-width: 2;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-}
-
-/* Since 2016 Badge */
-.since-badge {
-    position: absolute;
-    top: -10px;
-    right: -10px;
-    background-color: var(--green-primary);
-    color: white;
-    width: 100px;
-    height: 100px;
-    border-radius: 50%;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
     align-items: center;
-    transform: rotate(15deg);
-    box-shadow: 0 4px 12px rgba(45, 75, 64, 0.4);
-    z-index: 2;
 }
 
-.since-text {
-    font-size: 0.9rem;
-    font-weight: 700;
-    letter-spacing: 1px;
+.logo-original {
+    max-width: 100%;
+    height: auto;
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-md);
+    transition: transform 0.3s ease;
 }
 
-.since-year {
-    font-size: 1.8rem;
-    font-weight: 900;
-    font-family: 'Playfair Display', serif;
+.logo-original:hover {
+    transform: scale(1.02);
 }
 
 /* Slogan */
@@ -390,23 +309,41 @@ body {
         gap: var(--spacing-xl);
     }
 
-    .logo {
-        font-size: 3.8rem;
+    .logo-original {
+        max-width: 280px;
     }
 
-    .shop-name {
-        font-size: 1.8rem;
-        letter-spacing: 6px;
+    .slogan {
+        font-size: 1.1rem;
+        letter-spacing: 1px;
     }
 
-    .illustration {
-        width: 240px;
-        height: 240px;
+    .badges {
+        flex-direction: row;
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+
+    .premium-badge,
+    .only-one-badge {
+        text-align: center;
+    }
+
+    .qr-section {
+        flex-direction: column;
+        text-align: center;
+        padding: var(--spacing-md);
     }
 
     .qr-code {
-        width: 140px;
-        height: 140px;
+        width: 180px;
+        height: 180px;
+    }
+
+    .contact-icon {
+        width: 45px;
+        height: 45px;
+        font-size: 1.2rem;
     }
 }
 
@@ -423,41 +360,8 @@ body {
         border-width: 6px;
     }
 
-    .logo {
-        font-size: 3rem;
-    }
-
-    .shop-name {
-        font-size: 1.6rem;
-        letter-spacing: 4px;
-    }
-
-    .shop-name::before {
-        display: none;
-    }
-
-    .shop-name::after {
-        display: none;
-    }
-
-    .illustration {
-        width: 220px;
-        height: 220px;
-    }
-
-    .since-badge {
-        width: 80px;
-        height: 80px;
-        top: 0;
-        right: 0;
-    }
-
-    .since-text {
-        font-size: 0.75rem;
-    }
-
-    .since-year {
-        font-size: 1.4rem;
+    .logo-original {
+        max-width: 260px;
     }
 
     .slogan {
@@ -483,14 +387,26 @@ body {
     }
 
     .qr-code {
-        width: 180px;
-        height: 180px;
+        width: 150px;
+        height: 150px;
+    }
+
+    .scan-title {
+        font-size: 1.2rem;
+    }
+
+    .contact-item {
+        align-items: center;
+        text-align: center;
     }
 
     .contact-icon {
-        width: 45px;
-        height: 45px;
-        font-size: 1.2rem;
+        margin-right: 0;
+        margin-bottom: var(--spacing-xs);
+    }
+
+    .contact-text {
+        width: 100%;
     }
 }
 
@@ -502,28 +418,17 @@ body {
         border-radius: var(--radius-lg);
     }
 
-    .logo {
-        font-size: 2.4rem;
-        letter-spacing: -1px;
-    }
-
-    .shop-name {
-        font-size: 1.3rem;
-        letter-spacing: 3px;
-    }
-
-    .illustration {
-        width: 180px;
-        height: 180px;
+    .logo-original {
+        max-width: 220px;
     }
 
     .qr-code {
-        width: 150px;
-        height: 150px;
+        width: 140px;
+        height: 140px;
     }
 
     .scan-title {
-        font-size: 1.2rem;
+        font-size: 1rem;
     }
 
     .contact-item {
