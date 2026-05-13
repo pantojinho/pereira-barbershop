@@ -1158,3 +1158,40 @@ CREATE POLICY "Authenticated can delete product photos" ON storage.objects FOR D
 - Considerar adicionar transicoes entre steps mais elaboradas
 - Adicionar skeleton loading enquanto produtos carregam do Supabase
 
+---
+
+### Sessão 10 — 13/05/2026
+**Agente:** Hermes (glm-5.1 via Z.AI)
+**Tarefas realizadas:**
+- Reescrita completa do CSS da lojinha (produtos.css) — design mobile-first profissional
+- Adicionado controle de estoque nos produtos:
+  - Schema SQL: coluna `stock INTEGER DEFAULT 0` na tabela products
+  - Admin: campo estoque no formulário de criar/editar produto
+  - Admin: badge de estoque nos cards (verde/ok, laranja/baixo ≤5, vermelho/esgotado =0)
+  - Lojinha: produto esgotado com badge "ESGOTADO" e sem botão de adicionar
+  - Lojinha: bloqueia adicionar ao carrinho além do estoque disponível
+- Adicionado botão de excluir pedido no admin (qualquer status)
+- Atualizado README.md profissional
+- Commit: feat: controle de estoque (cf90a6b)
+- Commit: feat: botão excluir pedido (0ed3412)
+
+**Arquivos modificados:**
+- produtos.css — Reescrita completa mobile-first (864 linhas)
+- produtos.js — Verificação de estoque no carrinho + badge esgotado
+- admin.js — Campo estoque no formulário + badge nos cards + excluir pedido
+- admin.css — Estilos .card-stock (.stock-ok, .stock-low, .stock-empty)
+- supabase-schema.sql — Coluna stock + migration ALTER TABLE
+- README.md — Reescrita profissional completa
+- Todos sincronizados em static/
+
+**SQL rodado no Supabase:**
+ALTER TABLE products ADD COLUMN IF NOT EXISTS stock INTEGER NOT NULL DEFAULT 0;
+
+**Pendências / Roadmap futuro:**
+- Notificações push/som no browser para barbeiros com site aberto
+- Notificações por email (agendamento novo, cancelamento)
+- Sistema de login para barbeiros (ver só própria agenda/dashboard)
+- Chatbot WhatsApp para agendamento
+- Relatórios (faturamento, clientes recorrentes)
+- Sistema de avaliação
+
