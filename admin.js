@@ -1561,9 +1561,10 @@
 
             var actionsHtml = '';
             if (o.status === 'reserved') {
-                actionsHtml += '<button class="btn-outline btn-sm" onclick="AdminApp.markOrderPickedUp(\'' + jsString(o.id) + '\')">Retirado</button>';
-                actionsHtml += '<button class="btn-outline btn-sm btn-danger" onclick="AdminApp.cancelOrder(\'' + jsString(o.id) + '\')">Cancelar</button>';
+                actionsHtml += '<button class="btn-outline btn-sm" onclick="AdminApp.markOrderPickedUp(\'' + jsString(o.id) + '\')"><i class="fas fa-check"></i> Retirado</button>';
+                actionsHtml += '<button class="btn-outline btn-sm btn-danger" onclick="AdminApp.cancelOrder(\'' + jsString(o.id) + '\')"><i class="fas fa-ban"></i> Cancelar</button>';
             }
+            actionsHtml += '<button class="btn-outline btn-sm btn-danger" onclick="AdminApp.deleteOrder(\'' + jsString(o.id) + '\')" title="Excluir pedido"><i class="fas fa-trash-alt"></i></button>';
             if (o.status === 'reserved' || o.status === 'picked_up') {
                 var cleanPhone = o.client_phone.replace(/\D/g, '');
                 if (!cleanPhone.startsWith('55')) cleanPhone = '55' + cleanPhone;
@@ -1609,6 +1610,18 @@
                 toast('Erro: ' + result.error.message, 'error');
             } else {
                 toast('Pedido cancelado.', 'success');
+                loadProductOrders();
+            }
+        });
+    }
+
+    function deleteOrder(id) {
+        showConfirm('Excluir Pedido', 'Tem certeza que deseja excluir este pedido permanentemente? Esta ação não pode ser desfeita.', async function () {
+            var result = await sb.from('product_orders').delete().eq('id', id);
+            if (result.error) {
+                toast('Erro: ' + result.error.message, 'error');
+            } else {
+                toast('Pedido excluído.', 'success');
                 loadProductOrders();
             }
         });
@@ -1862,6 +1875,7 @@
         deleteProduct: deleteProduct,
         markOrderPickedUp: markOrderPickedUp,
         cancelOrder: cancelOrder,
+        deleteOrder: deleteOrder,
         goToPage: function (p) { loadAppointments(p); }
     };
 
