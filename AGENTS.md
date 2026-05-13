@@ -630,6 +630,49 @@ ON CONFLICT (barber_id, day_of_week) DO NOTHING;
 
 ---
 
+### Sessao 12 — 13/05/2026
+**Agente:** opencode (glm-5.1)
+**Tarefas realizadas:**
+- **Correção do botão voltar na página de agendamento:**
+  - Problema: o botão voltar (.booking-nav) estava desaparecendo em alguns casos
+  - Solução: mudou de `position: sticky` para `position: fixed` com `bottom: 0` e `left: 50%` + `transform: translateX(-50%)`
+  - Aumentado z-index de 20 para 100 para garantir que fique acima de outros elementos
+  - Aumentado a opacidade do background de 80% para 90% para melhor visibilidade
+- **Verificação do favicon:**
+  - Favicon.svg está correto e existe na raiz do projeto
+  - Arquivo tem 402 bytes e formato SVG válido
+  - Se o favicon não aparecer, pode ser cache do navegador (limpar cache ou abrir em janela anônima)
+- **Verificação do schema Supabase:**
+  - Tabelas do Supabase verificadas e confirmadas corretas
+  - barber_schedules (id, barber_id, day_of_week, start_time, end_time)
+  - holidays (id, date, description, recurring)
+  - barbers (id, name, active, sort_order, works_holidays)
+  - services (id, name, price, duration_min, featured, active, sort_order)
+  - appointments (id, barber_id, service_ids, service_names, appointment_date, appointment_time, client_name, client_phone, obs, status, total_price, total_duration)
+  - Funções RPC (get_public_booked_slots, create_public_appointment) verificadas
+  - RLS e security hardening verificados
+- Sincronizou arquivos modificados com pasta `static/`
+
+**Arquivos modificados:**
+- `agendar.css` — Booking-nav mudou de sticky para fixed, z-index aumentado
+- `index.html` — Favicon verificado e mantido (sem mudanças necessárias)
+- `static/agendar.css` — Sincronizado
+- `static/index.html` — Sincronizado
+
+**Notas importantes:**
+- O botão voltar agora fica fixo na parte inferior da tela em todos os passos do agendamento
+- O booking-nav não é mais afetado por elementos com position sticky (como services-summary no passo 2)
+- Se o favicon não aparecer no navegador, é necessário limpar o cache ou testar em janela anônima
+- O schema SQL do Supabase está correto e não há bugs nas tabelas ou funções
+
+**Pendências:**
+- Implementar notificações WhatsApp (Evolution API ou Z-API)
+- Chatbot WhatsApp para agendamento
+- Relatórios (faturamento, clientes recorrentes)
+- Sistema de avaliação
+
+---
+
 ### Plano do Sistema Completo (Roadmap)
 
 #### Fase 1 — Concluida
