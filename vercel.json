@@ -1,6 +1,7 @@
 {
+  "framework": null,
   "buildCommand": null,
-  "outputDirectory": "static",
+  "outputDirectory": ".",
   "cleanUrls": true,
-  "trailingSlash": false
+  "installCommand": null
 }
