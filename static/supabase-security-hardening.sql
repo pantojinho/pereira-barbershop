@@ -38,8 +38,16 @@ GRANT EXECUTE ON FUNCTION public.is_current_admin() TO anon, authenticated;
 ALTER TABLE public.admins ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Admins can read admins" ON public.admins;
+DROP POLICY IF EXISTS "Admins can insert admins" ON public.admins;
+DROP POLICY IF EXISTS "Admins can delete admins" ON public.admins;
 CREATE POLICY "Admins can read admins" ON public.admins
     FOR SELECT TO authenticated
+    USING (public.is_current_admin());
+CREATE POLICY "Admins can insert admins" ON public.admins
+    FOR INSERT TO authenticated
+    WITH CHECK (public.is_current_admin());
+CREATE POLICY "Admins can delete admins" ON public.admins
+    FOR DELETE TO authenticated
     USING (public.is_current_admin());
 
 -- 2. Replace broad "any authenticated user is admin" policies.

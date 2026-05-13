@@ -183,7 +183,6 @@
         loadDashboard();
         loadBarbers();
         loadServices();
-        loadHolidays();
         loadAdmins();
         loadAppointments();
     }
@@ -468,7 +467,7 @@
             var badgeClass = b.active ? 'badge-active' : 'badge-inactive';
             var badgeText = b.active ? 'Ativo' : 'Inativo';
             var scheduleStr = getBarberScheduleSummary(b.id);
-            var holidayBadge = b.works_holidays ? '<span class="card-badge badge-featured">&#128197; Trabalha feriados</span>' : '';
+            var holidayBadge = '';
             return '<div class="manage-card ' + (b.active ? '' : 'inactive') + '">' +
                 '<span class="card-badge ' + badgeClass + '">' + badgeText + '</span>' +
                 holidayBadge +
@@ -487,8 +486,6 @@
         var isEdit = !!barber;
         var title = isEdit ? 'Editar Barbeiro' : 'Novo Barbeiro';
         var name = isEdit ? barber.name : '';
-        var worksHolidays = isEdit ? (barber.works_holidays || false) : false;
-        var holidayChecked = worksHolidays ? 'checked' : '';
 
         var schedMap = {};
         (schedules || []).forEach(function (s) {
@@ -522,17 +519,15 @@
         });
 
         var html = '<div class="form-group"><label>Nome</label><input type="text" id="field-name" value="' + escapeHTML(name) + '" required></div>' +
-            '<div class="form-group"><label>Horários por dia da semana</label><div class="schedule-grid">' + scheduleHTML + '</div></div>' +
-            '<div class="form-group"><label class="checkbox-label"><input type="checkbox" id="field-works-holidays" ' + holidayChecked + '> Trabalha em feriados</label></div>';
+            '<div class="form-group"><label>Horários por dia da semana</label><div class="schedule-grid">' + scheduleHTML + '</div></div>';
 
 showModal(title, html, async function () {
              var newName = $('field-name').value.trim();
              if (!newName) { toast('Nome é obrigatório.', 'error'); return; }
 
              var barberData = {
-                 name: newName,
-                 works_holidays: $('field-works-holidays').checked
-             };
+                  name: newName
+              };
 
              var scheduleEntries = [];
              qsa('.day-check:checked').forEach(function (cb) {
@@ -582,14 +577,20 @@ showModal(title, html, async function () {
                  loadDashboard();
              }
          }, function () {
-             qsa('.day-check').forEach(function (cb) {
-                 var day = cb.getAttribute('data-day');
-                 var startInput = document.querySelector('.schedule-time-start[data-day="' + day + '"]');
-                 var endInput = document.querySelector('.schedule-time-end[data-day="' + day + '"]');
-                 startInput.disabled = !cb.checked;
-                 endInput.disabled = !cb.checked;
-             });
-         });
+              function toggleDayInputs() {
+                  qsa('.day-check').forEach(function (cb) {
+                      var day = cb.getAttribute('data-day');
+                      var startInput = document.querySelector('.schedule-time-start[data-day="' + day + '"]');
+                      var endInput = document.querySelector('.schedule-time-end[data-day="' + day + '"]');
+                      startInput.disabled = !cb.checked;
+                      endInput.disabled = !cb.checked;
+                  });
+              }
+              toggleDayInputs();
+              qsa('.day-check').forEach(function (cb) {
+                  cb.addEventListener('change', toggleDayInputs);
+              });
+          });
     }
 
     async function editBarber(id) {
@@ -832,32 +833,150 @@ showModal(title, html, async function () {
 
     async function loadAdmins() {
         try {
-            var result = await sb.from('barbers').select('*');
-            var users = result.data || [];
+            var result = await sb.from('admins').select('*').order('created_at', { ascending: true });
+            var admins = result.data || [];
             var container = $('admins-list');
 
             var session = await sb.auth.getSession();
-            var currentEmail = session.data.session ? session.data.session.user.email : '';
+            var currentUserId = session.data.session ? session.data.session.user.id : '';
 
-            container.innerHTML = '<div class="admin-card">' +
-                '<div class="admin-card-info">' +
-                    '<div class="admin-avatar">' + escapeHTML(currentEmail.charAt(0).toUpperCase()) + '</div>' +
-                    '<div><div class="admin-name">' + escapeHTML(currentEmail) + '</div><div class="admin-role">Admin autorizado</div></div>' +
-                '</div>' +
-                '<span class="status-badge status-confirmed">Ativo</span>' +
-            '</div>' +
-            '<p class="empty-state" style="margin-top:24px;font-size:0.8rem;">Novos administradores devem ser criados pelo Supabase Dashboard e liberados na tabela admins.</p>';
+            if (!admins.length) {
+                container.innerHTML = '<p class="empty-state">Nenhum administrador encontrado.</p>';
+                return;
+            }
+
+            var html = '';
+            admins.forEach(function (a) {
+                var isMe = a.user_id === currentUserId;
+                html += '<div class="admin-card">' +
+                    '<div class="admin-card-info">' +
+                        '<div class="admin-avatar">' + escapeHTML(a.email.charAt(0).toUpperCase()) + '</div>' +
+                        '<div>' +
+                            '<div class="admin-name">' + escapeHTML(a.email) + (isMe ? ' <span style="font-size:0.75rem;color:var(--gold-dim);">(você)</span>' : '') + '</div>' +
+                            '<div class="admin-role">Admin autorizado</div>' +
+                        '</div>' +
+                    '</div>' +
+                    '<div class="admin-card-actions">' +
+                        '<span class="status-badge status-confirmed">Ativo</span>' +
+                        (isMe ? '' : '<button class="btn-icon success" onclick="AdminApp.resetAdminPassword(\'' + jsString(a.email) + '\')" title="Resetar senha"><i class="fas fa-key"></i></button>' +
+                        '<button class="btn-icon danger" onclick="AdminApp.removeAdmin(\'' + a.user_id + '\', \'' + jsString(a.email) + '\')" title="Remover"><i class="fas fa-trash-alt"></i></button>') +
+                    '</div>' +
+                '</div>';
+            });
+
+            container.innerHTML = html;
         } catch (err) {
             $('admins-list').innerHTML = '<p class="empty-state">Erro ao carregar administradores.</p>';
         }
     }
 
     function showAddAdminForm() {
-        var html = '<p class="empty-state" style="padding:8px 0;text-align:left;color:var(--gray-600);">Por segurança, este painel não cria usuários pelo navegador. Crie o usuário em Authentication &gt; Users no Supabase e depois rode o insert na tabela <strong>admins</strong> usando o UID criado.</p>' +
-            '<pre class="code-snippet">insert into public.admins (user_id, email)\nvalues (\'UID_DO_USUARIO\', \'email@exemplo.com\');</pre>';
+        var html =
+            '<div class="form-group">' +
+                '<label><i class="fas fa-envelope"></i> Email</label>' +
+                '<input type="email" id="admin-new-email" placeholder="email@exemplo.com" style="font-size:16px" required>' +
+            '</div>' +
+            '<div class="form-group">' +
+                '<label><i class="fas fa-lock"></i> Senha</label>' +
+                '<input type="password" id="admin-new-password" placeholder="Mínimo 6 caracteres" style="font-size:16px" required>' +
+            '</div>' +
+            '<p style="font-size:0.8rem;color:var(--gray-600);margin-top:8px;">O novo admin receberá um email de confirmação (se ativado no Supabase). Após confirmar, poderá fazer login.</p>';
 
         showModal('Novo Administrador', html, function () {
+            addNewAdmin();
+        }, function () {
+            var emailInput = $('admin-new-email');
+            var passInput = $('admin-new-password');
+            if (emailInput) emailInput.focus();
+        });
+    }
+
+    async function addNewAdmin() {
+        var email = $('admin-new-email').value.trim();
+        var password = $('admin-new-password').value;
+
+        if (!email || !password) {
+            toast('Preencha email e senha.', 'error');
+            return;
+        }
+        if (password.length < 6) {
+            toast('A senha deve ter pelo menos 6 caracteres.', 'error');
+            return;
+        }
+
+        try {
+            var signUpResult = await sb.auth.signUp({
+                email: email,
+                password: password
+            });
+
+            if (signUpResult.error) {
+                if (signUpResult.error.message.indexOf('already registered') >= 0 || signUpResult.error.message.indexOf('already been registered') >= 0) {
+                    toast('Este email já está cadastrado. Adicione manualmente na tabela admins se for um usuário existente.', 'error');
+                } else {
+                    toast('Erro ao criar usuário: ' + signUpResult.error.message, 'error');
+                }
+                return;
+            }
+
+            var userId = signUpResult.data.user ? signUpResult.data.user.id : null;
+
+            if (!userId) {
+                toast('Usuário criado mas não foi possível obter o ID. Verifique o Supabase Auth e adicione manualmente na tabela admins.', 'error');
+                hideModal();
+                return;
+            }
+
+            var insertResult = await sb.from('admins').insert({
+                user_id: userId,
+                email: email,
+                active: true
+            });
+
+            if (insertResult.error) {
+                toast('Usuário criado no Auth mas erro ao adicionar na tabela admins: ' + insertResult.error.message, 'error');
+                hideModal();
+                return;
+            }
+
+            toast('Admin ' + email + ' criado com sucesso!', 'success');
             hideModal();
+            loadAdmins();
+        } catch (err) {
+            toast('Erro: ' + (err.message || 'Tente novamente.'), 'error');
+        }
+    }
+
+    function removeAdmin(userId, email) {
+        showConfirm('Remover Administrador', 'Tem certeza que deseja remover ' + email + '? O usuário continuará existindo no Supabase Auth mas perderá acesso ao painel.', async function () {
+            try {
+                var result = await sb.from('admins').delete().eq('user_id', userId);
+                if (result.error) {
+                    toast('Erro ao remover: ' + result.error.message, 'error');
+                    return;
+                }
+                toast('Admin ' + email + ' removido.', 'success');
+                loadAdmins();
+            } catch (err) {
+                toast('Erro ao remover admin.', 'error');
+            }
+        });
+    }
+
+    function resetAdminPassword(email) {
+        showConfirm('Resetar Senha', 'Enviar email de redefinição de senha para ' + email + '?', async function () {
+            try {
+                var result = await sb.auth.resetPasswordForEmail(email, {
+                    redirectTo: window.location.origin + '/admin.html'
+                });
+                if (result.error) {
+                    toast('Erro: ' + result.error.message, 'error');
+                    return;
+                }
+                toast('Email de redefinição enviado para ' + email, 'success');
+            } catch (err) {
+                toast('Erro ao enviar email de redefinição.', 'error');
+            }
         });
     }
 
@@ -931,6 +1050,8 @@ showModal(title, html, async function () {
         deleteService: deleteService,
         editHoliday: editHoliday,
         deleteHoliday: deleteHoliday,
+        removeAdmin: removeAdmin,
+        resetAdminPassword: resetAdminPassword,
         goToPage: function (p) { loadAppointments(p); }
     };
 

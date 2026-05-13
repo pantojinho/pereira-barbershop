@@ -840,6 +840,12 @@ body {
     color: var(--gray-500);
 }
 
+.admin-card-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
 /* ========== EMPTY STATE ========== */
 
 .empty-state {

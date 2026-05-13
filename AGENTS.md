@@ -673,6 +673,71 @@ ON CONFLICT (barber_id, day_of_week) DO NOTHING;
 
 ---
 
+### Sessao 13 — 13/05/2026
+**Agente:** opencode (glm-5.1)
+**Tarefas realizadas:**
+- **Gerenciamento de administradores pelo painel (CRUD completo):**
+  - `loadAdmins()` reescrita: agora lista todos os admins da tabela `admins` com avatar, email e badge "Ativo"
+  - Mostra "(você)" ao lado do admin logado
+  - Admin logado NÃO pode se auto-remover
+- **Adicionar novo admin:**
+  - Botão "+ Novo Admin" abre formulário com email + senha
+  - Usa `sb.auth.signUp()` para criar o usuário no Supabase Auth
+  - Após criar, insere automaticamente na tabela `admins` (user_id, email, active)
+  - Validação: email obrigatório, senha mínimo 6 caracteres
+  - Trata caso de email já cadastrado
+- **Resetar senha:**
+  - Botão "chave" (ícone key) ao lado de cada admin
+  - Usa `sb.auth.resetPasswordForEmail()` que envia email de redefinição de senha
+  - O admin recebe o email e redefine a senha sozinho
+  - redirectTo aponta para admin.html
+- **Remover admin:**
+  - Botão "lixo" (ícone trash) ao lado de cada admin (exceto o logado)
+  - Remove da tabela `admins` — o usuário continua no Supabase Auth mas perde acesso ao painel
+  - Confirmação antes de remover
+- **RLS atualizada para tabela admins:**
+  - Adicionadas policies de INSERT e DELETE para admins autenticados
+  - `Admins can insert admins` — WITH CHECK (is_current_admin())
+  - `Admins can delete admins` — USING (is_current_admin())
+- CSS: adicionado `.admin-card-actions` (flex, gap: 8px)
+- Sincronizou arquivos com pasta `static/`
+
+**Arquivos modificados:**
+- `admin.js` — loadAdmins, showAddAdminForm, addNewAdmin, removeAdmin, resetAdminPassword
+- `admin.css` — .admin-card-actions
+- `supabase-security-hardening.sql` — Policies INSERT/DELETE na tabela admins
+- Todos sincronizados em `static/`
+
+**SQL para rodar no Supabase (RLS da tabela admins):**
+```sql
+DROP POLICY IF EXISTS "Admins can insert admins" ON public.admins;
+DROP POLICY IF EXISTS "Admins can delete admins" ON public.admins;
+CREATE POLICY "Admins can insert admins" ON public.admins
+    FOR INSERT TO authenticated
+    WITH CHECK (public.is_current_admin());
+CREATE POLICY "Admins can delete admins" ON public.admins
+    FOR DELETE TO authenticated
+    USING (public.is_current_admin());
+```
+
+**Notas:**
+- O signUp pode exigir confirmação de email dependendo da config do Supabase
+- O reset de senha envia um email automático do Supabase
+- O usuário `recadosrafael@gmail.com` precisa ser adicionado à tabela admins:
+  ```sql
+  INSERT INTO public.admins (user_id, email, active)
+  VALUES ('4c0d66d6-0064-41a1-b386-d4dbba4329eb', 'recadosrafael@gmail.com', true)
+  ON CONFLICT (user_id) DO UPDATE SET email = EXCLUDED.email, active = true;
+  ```
+
+**Pendências:**
+- Implementar notificações WhatsApp (Evolution API ou Z-API)
+- Chatbot WhatsApp para agendamento
+- Relatórios (faturamento, clientes recorrentes)
+- Sistema de avaliação
+
+---
+
 ### Plano do Sistema Completo (Roadmap)
 
 #### Fase 1 — Concluida
