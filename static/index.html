@@ -115,25 +115,27 @@
             var el = document.getElementById('business-hours');
             if (!el) return;
             try {
-                var result = await sb.from('barbers').select('schedule_start, schedule_end, work_days').eq('active', true);
-                var barbers = result.data || [];
-                if (!barbers.length) {
+                var barbersResult = await sb.from('barbers').select('id').eq('active', true);
+                var barberIds = (barbersResult.data || []).map(function (b) { return b.id; });
+                if (!barberIds.length) {
                     el.innerHTML = 'Fechado';
                     return;
                 }
 
+                var schedResult = await sb.from('barber_schedules').select('*').in('barber_id', barberIds);
+                var schedules = schedResult.data || [];
+
                 var dayMap = {};
-                barbers.forEach(function (b) {
-                    var start = b.schedule_start ? b.schedule_start.substring(0, 5) : '09:00';
-                    var end = b.schedule_end ? b.schedule_end.substring(0, 5) : '19:00';
-                    (b.work_days || []).forEach(function (d) {
-                        if (!dayMap[d]) {
-                            dayMap[d] = { start: start, end: end };
-                        } else {
-                            if (start < dayMap[d].start) dayMap[d].start = start;
-                            if (end > dayMap[d].end) dayMap[d].end = end;
-                        }
-                    });
+                schedules.forEach(function (s) {
+                    var start = String(s.start_time).substring(0, 5);
+                    var end = String(s.end_time).substring(0, 5);
+                    var d = s.day_of_week;
+                    if (!dayMap[d]) {
+                        dayMap[d] = { start: start, end: end };
+                    } else {
+                        if (start < dayMap[d].start) dayMap[d].start = start;
+                        if (end > dayMap[d].end) dayMap[d].end = end;
+                    }
                 });
 
                 var openDays = Object.keys(dayMap).map(Number).sort(function (a, b) { return a - b; });

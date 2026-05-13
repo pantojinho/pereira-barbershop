@@ -50,20 +50,30 @@
         try {
             var result = await sb.from('barbers').select('*').eq('active', true).order('sort_order');
             var barbers = result.data || [];
+
+            var schedResult = await sb.from('barber_schedules').select('*');
+            var allSchedules = schedResult.data || [];
+
             BARBERS = {};
             var html = '';
             barbers.forEach(function (b) {
-                var key = b.id;
-                BARBERS[key] = {
+                var schedules = allSchedules.filter(function (s) { return s.barber_id === b.id; });
+                var daySchedule = {};
+                schedules.forEach(function (s) {
+                    daySchedule[s.day_of_week] = {
+                        start: String(s.start_time).substring(0, 5),
+                        end: String(s.end_time).substring(0, 5)
+                    };
+                });
+
+                BARBERS[b.id] = {
                     id: b.id,
                     name: b.name,
-                    schedule: {
-                        start: b.schedule_start,
-                        end: b.schedule_end,
-                        days: b.work_days || []
-                    }
+                    works_holidays: b.works_holidays || false,
+                    schedule: daySchedule
                 };
-                html += '<div class="barber-option" data-barber="' + key + '">' +
+
+                html += '<div class="barber-option" data-barber="' + b.id + '">' +
                     '<div class="barber-icon"><i class="fas fa-cut"></i></div>' +
                     '<div class="barber-info">' +
                         '<div class="barber-name">' + escapeHTML(b.name) + '</div>' +
@@ -175,7 +185,7 @@
     function renderCalendar() {
         var year = calendarDate.getFullYear();
         var month = calendarDate.getMonth();
-        var months = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+        var months = ["Janeiro", "Fevereiro", "Março", "Abril", "Mai", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
         $("current-month-year").textContent = months[month] + " " + year;
 
         var firstDay = new Date(year, month, 1).getDay();
@@ -183,7 +193,9 @@
         var today = new Date();
         today.setHours(0, 0, 0, 0);
 
-        var barberSchedule = booking.barber ? BARBERS[booking.barber].schedule : null;
+        var barber = booking.barber ? BARBERS[booking.barber] : null;
+        var barberSchedule = barber ? barber.schedule : null;
+        var worksHolidays = barber ? barber.works_holidays : false;
 
         var html = "";
         for (var i = 0; i < firstDay; i++) {
@@ -196,11 +208,11 @@
             var dayOfWeek = date.getDay();
             var isPast = date < today;
             var isToday = date.getTime() === today.getTime();
-            var isSunday = dayOfWeek === 0;
             var dateStr = year + "-" + String(month + 1).padStart(2, "0") + "-" + String(d).padStart(2, "0");
-            var barberWorks = barberSchedule ? barberSchedule.days.indexOf(dayOfWeek) !== -1 : true;
+            var barberWorksDay = barberSchedule ? !!barberSchedule[dayOfWeek] : true;
             var isHolidayDay = isHoliday(dateStr);
-            var disabled = isPast || isSunday || !barberWorks || isHolidayDay;
+            var blockedByHoliday = isHolidayDay && !worksHolidays;
+            var disabled = isPast || !barberWorksDay || blockedByHoliday;
             var selClass = selectedDate && selectedDate.getTime() === date.getTime() ? " selected" : "";
             var todayClass = isToday ? " today" : "";
 
@@ -268,9 +280,18 @@
             return;
         }
 
-        var schedule = BARBERS[booking.barber].schedule;
-        var startParts = schedule.start.split(":");
-        var endParts = schedule.end.split(":");
+        var barber = BARBERS[booking.barber];
+        var dayOfWeek = selectedDate.getDay();
+        var daySchedule = barber.schedule[dayOfWeek];
+
+        if (!daySchedule) {
+            $("time-slots").innerHTML = '<p class="step-subtitle" style="padding:20px 0;">Este barbeiro não trabalha neste dia.</p>';
+            $("time-hint").textContent = "Dia indisponível";
+            return;
+        }
+
+        var startParts = daySchedule.start.split(":");
+        var endParts = daySchedule.end.split(":");
         var startMin = parseInt(startParts[0]) * 60 + parseInt(startParts[1]);
         var endMin = parseInt(endParts[0]) * 60 + parseInt(endParts[1]);
         var serviceDuration = booking.totalDuration || 60;

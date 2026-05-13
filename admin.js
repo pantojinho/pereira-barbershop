@@ -305,6 +305,7 @@
             var barberName = a.barber ? a.barber.name : 'Barbeiro';
             var services = (a.service_names || []).join(', ');
             var dateLabel = isSimple ? '' : '<span>' + formatDate(a.appointment_date) + '</span>';
+            var obsHtml = a.obs ? '<span class="appointment-obs">&#9993; ' + escapeHTML(a.obs) + '</span>' : '';
 
             var actions = '';
             if (!isSimple) {
@@ -327,6 +328,7 @@
                             '<span>' + escapeHTML(services) + '</span>' +
                             dateLabel +
                         '</div>' +
+                        obsHtml +
                     '</div>' +
                 '</div>' +
                 '<div class="appointment-actions">' +

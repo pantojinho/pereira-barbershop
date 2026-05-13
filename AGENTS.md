@@ -42,29 +42,26 @@ Landing page tipo "cartao de visitas digital" + sistema de agendamento online pa
 
 ```
 /
-  index.html          ← Pagina principal (raiz, usada pelo Vercel)
-  style.css           ← Estilos da landing page (raiz, usada pelo Vercel)
-  agendar.html        ← Pagina de agendamento (raiz, usada pelo Vercel)
-  agendar.css         ← Estilos da pagina de agendamento (raiz)
-  agendar.js          ← Logica do agendamento (raiz)
-  logo.png            ← Logo oficial (raiz, usada pelo Vercel)
-  favicon.svg         ← Favicon (raiz, usada pelo Vercel)
-  vercel.json         ← Config do Vercel (framework: null, outputDirectory: ".")
-  server.py           ← Servidor local FastAPI (para desenvolvimento local)
-  requirements.txt    ← Dependencies Python (GITIGNORED - nao vai para o Vercel)
-  static/             ← Pasta usada pelo server.py local
-    index.html        ← Copia da pagina (mantida sincronizada)
-    style.css         ← Copia dos estilos (mantida sincronizada)
-    agendar.html      ← Copia da pagina de agendamento
-    agendar.css       ← Copia dos estilos
-    agendar.js        ← Copia da logica
-    logo.png          ← Copia da logo
-    logo Png.png      ← Arquivo original com espaco no nome
-    logo-original.jpg ← Logo antiga (legado)
-    favicon.svg       ← Favicon
-  docs/
-    deployment.md     ← Documentacao de deploy
-  AGENTS.md           ← Este arquivo
+  index.html                    ← Landing page (raiz, usada pelo Vercel)
+  style.css                     ← Estilos da landing page (raiz)
+  agendar.html                  ← Pagina de agendamento (raiz)
+  agendar.css                   ← Estilos do agendamento (raiz)
+  agendar.js                    ← Logica do agendamento — fluxo: Barbeiro → Servico → Data/Hora → Dados
+  admin.html                    ← Painel administrativo (login + CRUD)
+  admin.css                     ← Estilos do painel admin
+  admin.js                      ← Logica do painel admin (Supabase Client)
+  supabase-config.js            ← Config Supabase (URL + anon key) — GITIGNORED
+  supabase-schema.sql           ← SQL para criar tabelas (referencia)
+  supabase-security-hardening.sql ← SQL para RLS + RPC + admin allow-list
+  logo.png                      ← Logo oficial (raiz)
+  favicon.svg                   ← Favicon (raiz)
+  vercel.json                   ← Config do Vercel (framework: null, outputDirectory: ".")
+  server.py                     ← Servidor local FastAPI (desenvolvimento)
+  requirements.txt              ← Dependencies Python — GITIGNORED
+  static/                       ← Copia para servidor local (sincronizada com raiz)
+    index.html, style.css, agendar.html, agendar.css, agendar.js,
+    admin.html, admin.css, admin.js, supabase-config.js, logo.png, favicon.svg
+  AGENTS.md                     ← Este arquivo (memoria compartilhada)
   .gitignore
   README.md
 ```
@@ -440,6 +437,144 @@ CREATE POLICY "Public can read holidays" ON holidays
 CREATE POLICY "Authenticated users can manage holidays" ON holidays
     FOR ALL USING (auth.role() = 'authenticated');
 ```
+
+**Pendencias:**
+- Implementar notificacoes WhatsApp (Evolution API ou Z-API)
+- Chatbot WhatsApp para agendamento
+- Relatorios (faturamento, clientes recorrentes)
+- Sistema de avaliacao
+
+---
+
+### Sessao 9 — 13/05/2026 (noite)
+**Agente:** opencode (glm-5.1)
+**Tarefas realizadas:**
+- Commit final de todos os arquivos pendentes (holidays, dynamic hours, dashboard barber filter, admin enhancements)
+- Corrigido `supabase-security-hardening.sql`:
+  - Adicionado `p_obs TEXT DEFAULT NULL` na RPC `create_public_appointment`
+  - Adicionado `DROP POLICY IF EXISTS` para TODAS as policies (evita erro "policy already exists" ao re-rodar)
+- Documentacao completa no AGENTS.md (sessao 7, 8 e 9)
+- 4 commits pushados para main
+
+**Commits desta sessao:**
+1. `77c314d` — Document session 7: step reorder, single service, overlap scheduling, obs field, featured tag
+2. `83ef155` — Add obs parameter to create_public_appointment RPC in security hardening SQL
+3. `5b2c379` — Fix: add DROP POLICY IF EXISTS for all policies in security hardening SQL
+4. `c38aa1d` — Add holidays system, dynamic business hours, dashboard barber filter and admin enhancements
+
+**SQL importante — rodar no Supabase SQL Editor:**
+```sql
+-- Migration (se ainda nao rodou)
+ALTER TABLE services ADD COLUMN IF NOT EXISTS featured BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE appointments ADD COLUMN IF NOT EXISTS obs TEXT;
+UPDATE services SET featured = true WHERE name = 'Corte + Barbaterapia (sobrancelha cortesia)';
+
+-- Tabela de feriados (se ainda nao rodou)
+CREATE TABLE IF NOT EXISTS holidays (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    date DATE NOT NULL UNIQUE,
+    description TEXT,
+    recurring BOOLEAN NOT NULL DEFAULT false,
+    created_at TIMESTAMPTZ DEFAULT now()
+);
+ALTER TABLE holidays ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Public can read holidays" ON holidays FOR SELECT USING (true);
+CREATE POLICY "Authenticated users can manage holidays" ON holidays FOR ALL USING (auth.role() = 'authenticated');
+
+-- Security hardening (rodar o arquivo supabase-security-hardening.sql completo)
+-- Cria tabela admins, funcoes RPC, policies restritivas
+```
+
+**Estado atual do sistema:**
+- Landing page: OK (index.html)
+- Agendamento: OK (agendar.html) — fluxo Barbeiro → Servico → Data/Hora → Dados
+- Painel admin: OK (admin.html) — Dashboard, Barbeiros, Servicos, Feriados, Agendamentos, Admins
+- Banco: Supabase com RLS + RPC hardening + admin allow-list
+- Deploy: Vercel (automatico via push na main)
+
+**Pendencias:**
+- Implementar notificacoes WhatsApp (Evolution API ou Z-API)
+- Chatbot WhatsApp para agendamento
+- Relatorios (faturamento, clientes recorrentes)
+- Sistema de avaliacao
+
+---
+
+### Sessao 10 — 13/05/2026
+**Agente:** opencode (glm-5.1)
+**Tarefas realizadas:**
+- **Refatoracao completa do sistema de horarios por barbeiro:**
+  - Antes: barbeiro tinha um unico `schedule_start`, `schedule_end` e `work_days` (mesmo horario para todos os dias)
+  - Agora: tabela separada `barber_schedules` com horario INDEPENDENTE por dia da semana para cada barbeiro
+  - Cada barbeiro pode ter horarios diferentes: ex: Seg 09h-17h, Qua 10h-19h, Sab 08h-14h
+- **Barbeiro pode trabalhar em feriados:**
+  - Novo campo `works_holidays` na tabela `barbers` (boolean, default false)
+  - Se `works_holidays = true`, o barbeiro NAO e bloqueado por feriados no calendario
+  - Se `works_holidays = false`, feriados bloqueiam o calendario daquele barbeiro
+- **Admin — formulario de barbeiro redesenhado:**
+  - 7 linhas (Dom a Sab) com checkbox + horario inicio/fim por dia
+  - Checkbox habilita/desabilita os inputs de horario daquele dia
+  - Checkbox "Trabalha em feriados"
+  - Ao salvar: deleta schedules antigos e insere novos
+  - Card do barbeiro mostra horarios agrupados (ex: "Seg-Sex 09h-19h, Sab 09h-14h")
+- **Agendar.js — reescrito para usar barber_schedules:**
+  - BARBERS[id].schedule agora e um objeto {dayOfWeek: {start, end}}
+  - Calendario verifica se o barbeiro trabalha naquele dia da semana
+  - Feriados so bloqueiam se o barbeiro NAO trabalha feriados
+  - Time slots usam o horario especifico do dia selecionado
+- **Landing page — horario dinamico via barber_schedules:**
+  - Carrega barber_schedules ao inves de schedule_start/schedule_end
+  - Calcula horario de abertura/fechamento por dia baseado em todos os barbeiros
+- Sincronizou todos os arquivos com pasta `static/`
+
+**Novas tabelas SQL:**
+- `barber_schedules` (id, barber_id, day_of_week, start_time, end_time) — UNIQUE(barber_id, day_of_week)
+- `barbers` recebeu coluna `works_holidays BOOLEAN DEFAULT false`
+
+**Arquitetura nova de horarios:**
+```
+barbers (id, name, active, sort_order, works_holidays)
+  └── barber_schedules (id, barber_id, day_of_week, start_time, end_time)
+```
+
+**SQL para rodar no Supabase (migration):**
+```sql
+-- 1. Adicionar works_holidays
+ALTER TABLE barbers ADD COLUMN IF NOT EXISTS works_holidays BOOLEAN NOT NULL DEFAULT false;
+
+-- 2. Criar tabela barber_schedules
+CREATE TABLE IF NOT EXISTS barber_schedules (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    barber_id UUID NOT NULL REFERENCES barbers(id) ON DELETE CASCADE,
+    day_of_week SMALLINT NOT NULL CHECK (day_of_week BETWEEN 0 AND 6),
+    start_time TIME NOT NULL DEFAULT '09:00',
+    end_time TIME NOT NULL DEFAULT '19:00',
+    UNIQUE(barber_id, day_of_week)
+);
+ALTER TABLE barber_schedules ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Public can read barber schedules" ON barber_schedules FOR SELECT USING (true);
+CREATE POLICY "Authenticated users can manage barber schedules" ON barber_schedules FOR ALL USING (auth.role() = 'authenticated');
+
+-- 3. Migrar dados antigos (schedule_start/schedule_end/work_days -> barber_schedules)
+INSERT INTO barber_schedules (barber_id, day_of_week, start_time, end_time)
+SELECT b.id, unnest(b.work_days) AS day, b.schedule_start, b.schedule_end
+FROM barbers b
+WHERE b.work_days IS NOT NULL AND array_length(b.work_days, 1) > 0
+ON CONFLICT (barber_id, day_of_week) DO NOTHING;
+
+-- 4. (Opcional) Remover colunas antigas
+-- ALTER TABLE barbers DROP COLUMN IF EXISTS schedule_start;
+-- ALTER TABLE barbers DROP COLUMN IF EXISTS schedule_end;
+-- ALTER TABLE barbers DROP COLUMN IF EXISTS work_days;
+```
+
+**Arquivos modificados:**
+- `supabase-schema.sql` — Reescrito: nova tabela barber_schedules, works_holidays, migration SQL
+- `admin.js` — loadBarbers com barber_schedules, showBarberForm com 7 linhas de horario, editBarber carrega schedules
+- `admin.css` — .schedule-grid, .schedule-row, .schedule-day-check estilos
+- `agendar.js` — Reescrito: usa barber_schedules, works_holidays, feriados por barbeiro
+- `index.html` — Horario dinamico via barber_schedules
+- Todos sincronizados em `static/`
 
 **Pendencias:**
 - Implementar notificacoes WhatsApp (Evolution API ou Z-API)
