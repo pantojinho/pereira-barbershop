@@ -738,6 +738,48 @@ CREATE POLICY "Admins can delete admins" ON public.admins
 
 ---
 
+### Sessao 14 — 13/05/2026
+**Agente:** opencode (glm-5.1)
+**Tarefas realizadas:**
+- **Correcao do formulario de horarios do barbeiro (bug critico):**
+  - Problema: ao editar barbeiro, os checkboxes de dias da semana nao habilitavam/desabilitavam os campos de horario ao clicar
+  - Causa: o callback `onOpen` do `showBarberForm` so definia o estado inicial dos inputs mas NAO adicionava `change` event listeners nos checkboxes
+  - Solucao: criada funcao `toggleDayInputs()` que e chamada no `onOpen` e tambem vinculada ao evento `change` de cada checkbox
+  - Agora ao marcar/desmarcar um dia, os campos de horario habilitam/desabilitam corretamente em tempo real
+- **Remocao completa da aba Feriados:**
+  - Removido tab "Feriados" do `admin.html`
+  - Removida secao `tab-holidays` inteira do `admin.html`
+  - Removidas todas as funcoes CRUD de feriados do `admin.js` (loadHolidays, renderHolidays, showHolidayForm, editHoliday, deleteHoliday)
+  - Removido campo `works_holidays` do formulario de barbeiro e do card de barbeiro
+  - Removido `loadHolidays()` de `showAdminPanel`
+  - Removido event listener do botao `btn-add-holiday`
+  - Removidas referencias a feriados do `AdminApp` exports
+- **Remocao de feriados do agendamento (agendar.js):**
+  - Removida variavel `HOLIDAYS`
+  - Removida chamada `loadHolidays()` do init
+  - Removidas funcoes `loadHolidays()` e `isHoliday()`
+  - Removida verificacao de feriado no calendario (blockedByHoliday)
+  - Removido campo `works_holidays` do objeto BARBERS
+- Sincronizou todos os arquivos com pasta `static/`
+
+**Motivo da remocao dos feriados:**
+- O sistema de feriados bloqueava todos os barbeiros igualmente, mas na pratica cada barbeiro decide se trabalha ou nao em feriados dependendo da semana
+- Nao e util ter uma lista fixa de feriados — cada um gerencia seus proprios horarios pela tabela `barber_schedules`
+
+**Arquivos modificados:**
+- `admin.js` — Fix checkbox toggleDayInputs + removido holidays CRUD + works_holidays
+- `admin.html` — Removido tab e secao Feriados
+- `agendar.js` — Removido HOLIDAYS, loadHolidays, isHoliday, works_holidays
+- Todos sincronizados em `static/`
+
+**Pendencias:**
+- Implementar notificacoes WhatsApp (Evolution API ou Z-API)
+- Chatbot WhatsApp para agendamento
+- Relatorios (faturamento, clientes recorrentes)
+- Sistema de avaliacao
+
+---
+
 ### Plano do Sistema Completo (Roadmap)
 
 #### Fase 1 — Concluida

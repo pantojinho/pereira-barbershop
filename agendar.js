@@ -25,7 +25,6 @@
     var selectedDate = null;
     var BARBERS = {};
     var SERVICES_DB = [];
-    var HOLIDAYS = [];
     var SLOT_INTERVAL = 30;
 
     function $(id) { return document.getElementById(id); }
@@ -40,7 +39,6 @@
     async function init() {
         await loadBarbers();
         await loadServices();
-        await loadHolidays();
         setupCalendar();
         setupNav();
         updateNavButtons();
@@ -69,7 +67,6 @@
                 BARBERS[b.id] = {
                     id: b.id,
                     name: b.name,
-                    works_holidays: b.works_holidays || false,
                     schedule: daySchedule
                 };
 
@@ -126,29 +123,6 @@
         }
     }
 
-    async function loadHolidays() {
-        try {
-            var result = await sb.from('holidays').select('*');
-            HOLIDAYS = result.data || [];
-        } catch (err) {
-            HOLIDAYS = [];
-        }
-    }
-
-    function isHoliday(dateStr) {
-        var parts = dateStr.split('-');
-        var monthDay = parts[1] + '-' + parts[2];
-        for (var i = 0; i < HOLIDAYS.length; i++) {
-            var h = HOLIDAYS[i];
-            if (h.date === dateStr) return true;
-            if (h.recurring) {
-                var hParts = h.date.split('-');
-                if (hParts[1] + '-' + hParts[2] === monthDay) return true;
-            }
-        }
-        return false;
-    }
-
     function setupBarbers() {
         var options = $$(".barber-option");
         options.forEach(function (opt) {
@@ -195,7 +169,6 @@
 
         var barber = booking.barber ? BARBERS[booking.barber] : null;
         var barberSchedule = barber ? barber.schedule : null;
-        var worksHolidays = barber ? barber.works_holidays : false;
 
         var html = "";
         for (var i = 0; i < firstDay; i++) {
@@ -210,9 +183,7 @@
             var isToday = date.getTime() === today.getTime();
             var dateStr = year + "-" + String(month + 1).padStart(2, "0") + "-" + String(d).padStart(2, "0");
             var barberWorksDay = barberSchedule ? !!barberSchedule[dayOfWeek] : true;
-            var isHolidayDay = isHoliday(dateStr);
-            var blockedByHoliday = isHolidayDay && !worksHolidays;
-            var disabled = isPast || !barberWorksDay || blockedByHoliday;
+            var disabled = isPast || !barberWorksDay;
             var selClass = selectedDate && selectedDate.getTime() === date.getTime() ? " selected" : "";
             var todayClass = isToday ? " today" : "";
 
