@@ -259,3 +259,7 @@ CREATE POLICY "Authenticated can delete product photos" ON storage.objects
 
 -- MIGRATION: Adicionar coluna stock na tabela products
 ALTER TABLE products ADD COLUMN IF NOT EXISTS stock INTEGER NOT NULL DEFAULT 0;
+
+-- MIGRATION: Sistema de login para barbeiros
+ALTER TABLE admins ADD COLUMN IF NOT EXISTS role TEXT NOT NULL DEFAULT 'admin' CHECK (role IN ('admin', 'barber'));
+ALTER TABLE admins ADD COLUMN IF NOT EXISTS barber_id UUID REFERENCES barbers(id);

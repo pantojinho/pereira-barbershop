@@ -5,6 +5,10 @@
     var ITEMS_PER_PAGE = 15;
     var currentPage = 1;
 
+    var currentUserRole = 'admin';
+    var currentUserBarberId = null;
+    var currentUserBarberName = null;
+
     function $(id) { return document.getElementById(id); }
     function qs(sel) { return document.querySelector(sel); }
     function qsa(sel) { return document.querySelectorAll(sel); }
@@ -123,7 +127,7 @@
             var allowed = await verifyAdminAccess();
             if (!allowed) {
                 await sb.auth.signOut();
-                errEl.textContent = 'Seu usuário não tem permissão de administrador.';
+                errEl.textContent = 'Seu usuário não tem permissão de acesso.';
                 errEl.style.display = 'block';
                 btnLogin.disabled = false;
                 btnLogin.innerHTML = '<i class="fas fa-sign-in-alt"></i> Entrar';
@@ -164,14 +168,38 @@
     }
 
     async function verifyAdminAccess() {
-        var result = await sb.rpc('is_current_admin');
-        if (!result.error) return result.data === true;
-
-        // Compatibility while the security SQL has not been applied yet.
-        // Real authorization must be enforced by the RLS policies in Supabase.
-        if (result.error.message && result.error.message.indexOf('Could not find the function') >= 0) {
-            console.warn('Supabase admin hardening RPC is missing. Apply supabase-security-hardening.sql.');
-            return true;
+        try {
+            var rpcResult = await sb.rpc('is_current_admin');
+            if (rpcResult.data === true) {
+                // Buscar role do usuario na tabela admins
+                var session = await sb.auth.getSession();
+                var userId = session.data.session.user.id;
+                var adminResult = await sb.from('admins').select('role, barber_id').eq('user_id', userId).single();
+                if (adminResult.data) {
+                    currentUserRole = adminResult.data.role || 'admin';
+                    currentUserBarberId = adminResult.data.barber_id || null;
+                }
+                return true;
+            }
+            // Compatibility while the security SQL has not been applied yet.
+            if (rpcResult.error && rpcResult.error.message && rpcResult.error.message.indexOf('Could not find the function') >= 0) {
+                console.warn('Supabase admin hardening RPC is missing. Apply supabase-security-hardening.sql.');
+                return true;
+            }
+        } catch (err) {
+            // Fallback: check admins table directly
+            try {
+                var session2 = await sb.auth.getSession();
+                if (session2.data && session2.data.session) {
+                    var userId2 = session2.data.session.user.id;
+                    var adminResult2 = await sb.from('admins').select('role, barber_id').eq('user_id', userId2).single();
+                    if (adminResult2.data) {
+                        currentUserRole = adminResult2.data.role || 'admin';
+                        currentUserBarberId = adminResult2.data.barber_id || null;
+                        return true;
+                    }
+                }
+            } catch (e) {}
         }
         return false;
     }
@@ -180,6 +208,30 @@
         $('login-screen').style.display = 'none';
         $('admin-panel').style.display = 'block';
         $('admin-email').textContent = user.email;
+
+        // Se barbeiro, esconder abas restritas e filtrar
+        if (currentUserRole === 'barber') {
+            qsa('.nav-tab').forEach(function(tab) {
+                var tabName = tab.getAttribute('data-tab');
+                if (tabName !== 'dashboard' && tabName !== 'appointments') {
+                    tab.style.display = 'none';
+                }
+            });
+            // Mudar subtítulo
+            var subtitle = qs('.header-subtitle');
+            if (subtitle) subtitle.textContent = 'Minha Agenda';
+            // Buscar nome do barbeiro
+            if (currentUserBarberId) {
+                sb.from('barbers').select('name').eq('id', currentUserBarberId).single().then(function(r) {
+                    if (r.data) {
+                        currentUserBarberName = r.data.name;
+                        var subtitle2 = qs('.header-subtitle');
+                        if (subtitle2) subtitle2.textContent = 'Agenda de ' + r.data.name;
+                    }
+                });
+            }
+        }
+
         loadDashboard();
         loadBarbers();
         loadServices();
@@ -206,12 +258,26 @@
         var today = todayStr();
         var week = getWeekRange();
         var dashboardBarber = $('dashboard-barber') ? $('dashboard-barber').value : '';
+        // Se barbeiro logado, forçar filtro para o próprio barbeiro
+        if (currentUserRole === 'barber' && currentUserBarberId) {
+            dashboardBarber = currentUserBarberId;
+        }
         $('dashboard-date').textContent = formatDate(today);
 
         try {
             var todayAppts = await sb.from('appointments').select('*, barber:barbers(name)').eq('appointment_date', today).neq('status', 'cancelled');
             var weekAppts = await sb.from('appointments').select('id').gte('appointment_date', week.start).lte('appointment_date', week.end).neq('status', 'cancelled');
             var barbers = await sb.from('barbers').select('id, name').eq('active', true).order('sort_order').order('name');
+
+            // Filtrar por barbeiro se for role barber
+            if (currentUserRole === 'barber' && currentUserBarberId) {
+                if (todayAppts.data) {
+                    todayAppts.data = todayAppts.data.filter(function(a) { return a.barber_id === currentUserBarberId; });
+                }
+                if (weekAppts.data) {
+                    weekAppts.data = weekAppts.data.filter(function(a) { return a.barber_id === currentUserBarberId; });
+                }
+            }
 
             $('stat-today').textContent = todayAppts.data ? todayAppts.data.length : 0;
             $('stat-week').textContent = weekAppts.data ? weekAppts.data.length : 0;
@@ -279,6 +345,11 @@
         if (filterBarber) query = query.eq('barber_id', filterBarber);
         if (filterStatus) query = query.eq('status', filterStatus);
         if (filterDate) query = query.eq('appointment_date', filterDate);
+
+        // Se barbeiro, filtrar automaticamente para o próprio barbeiro
+        if (currentUserRole === 'barber' && currentUserBarberId) {
+            query = query.eq('barber_id', currentUserBarberId);
+        }
 
         var from = (page - 1) * ITEMS_PER_PAGE;
         var to = from + ITEMS_PER_PAGE - 1;
