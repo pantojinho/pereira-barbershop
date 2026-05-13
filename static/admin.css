@@ -595,6 +595,20 @@ body {
     gap: 4px;
 }
 
+.appointment-obs {
+    font-size: 0.8rem;
+    color: var(--warning);
+    background: var(--warning-light);
+    padding: 4px 10px;
+    border-radius: 6px;
+    margin-top: 4px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    max-width: 100%;
+    word-break: break-word;
+}
+
 .appointment-actions {
     display: flex;
     gap: 4px;
