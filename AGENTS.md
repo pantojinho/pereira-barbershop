@@ -843,6 +843,51 @@ ON CONFLICT (barber_id, day_of_week) DO NOTHING;
 
 ---
 
+### Sessão 22 — 13/05/2026
+**Agente:** opencode (glm-4.7)
+**Tarefas realizadas:**
+- **Melhoria do fluxo de cancelamento:**
+  - Ao clicar em "Cancelar", a página agora rola automaticamente até o final do modal para mostrar o aviso do WhatsApp
+  - Adicionada div com ID `cancel-warning-box` para facilitar o scroll suave
+  - Scroll é executado 100ms após atualizar o DOM para garantir que o elemento exista
+- **Adicionada opção "Reagendar" no modal de cancelamento:**
+  - Nova função `rescheduleAppointment(id)` que busca o agendamento e redireciona para `agendar.html` com parâmetros na URL
+  - Parâmetros: `?barber=ID&service=ID`
+  - Botão "Reagendar" aparece antes de "Confirmar Cancelamento"
+- **Ajuste do texto do WhatsApp para cancelamento:**
+  - Texto mais amigável e profissional com emojis
+  - Mensagem: "Olá, [nome]! 😊 Gostaríamos de confirmar com você sobre seu agendamento..."
+  - Explicação: "Algum imprevisto aconteceu e precisamos fazer um ajuste. Pedimos mil desculpas! ❤️"
+  - Link para reagendar no site
+  - Assinatura: "Agradecemos desde já! ✂️"
+- **Pré-seleção de barbeiro e serviço na página de agendamento:**
+  - Modificado `init()` para ler parâmetros da URL (`?barber=ID&service=ID`)
+  - `loadBarbers()` e `loadServices()` agora aceitam parâmetro para pré-selecionar
+  - `setupBarbers()` e `setupServices()` pré-selecionam automaticamente se o parâmetro existir
+  - Facilita o reagendamento: ao clicar em "Reagendar", o cliente já vê o barbeiro e serviço selecionados
+- Sincronizou arquivos com pasta `static/`
+- Commit e push para o GitHub (`11be4ea`)
+
+**Arquivos modificados:**
+- `admin.js` — `cancelAppointmentFromDetails()` com scroll, `rescheduleAppointment()` nova função, `getWhatsAppCancelLink()` com texto melhorado
+- `agendar.js` — `init()` lê URL params, `loadBarbers()` e `loadServices()` com parâmetros, `setupBarbers()` e `setupServices()` pré-selecionam
+- `static/admin.js` — Sincronizado
+- `static/agendar.js` — Sincronizado
+
+**Notas importantes:**
+- Ao clicar em "Cancelar", o modal rola até o aviso do WhatsApp automaticamente
+- O botão "Reagendar" facilita muito o reagendamento de agendamentos cancelados
+- O texto do WhatsApp agora é mais profissional e amigável
+- A pré-seleção de barbeiro/servico melhora a UX do reagendamento
+
+**Pendências:**
+- Implementar notificacoes WhatsApp (Evolution API ou Z-API)
+- Chatbot WhatsApp para agendamento
+- Relatorios (faturamento, clientes recorrentes)
+- Sistema de avaliacao
+
+---
+
 ### Plano do Sistema Completo (Roadmap)
 
 #### Fase 1 — Concluida
