@@ -77,43 +77,55 @@ ALTER TABLE appointments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE holidays ENABLE ROW LEVEL SECURITY;
 
 -- BARBEIROS
+DROP POLICY IF EXISTS "Public can read active barbers" ON barbers;
 CREATE POLICY "Public can read active barbers" ON barbers
     FOR SELECT USING (active = true);
 
+DROP POLICY IF EXISTS "Authenticated users can manage barbers" ON barbers;
 CREATE POLICY "Authenticated users can manage barbers" ON barbers
     FOR ALL USING (auth.role() = 'authenticated');
 
 -- BARBER SCHEDULES (publico le para agendamento)
+DROP POLICY IF EXISTS "Public can read barber schedules" ON barber_schedules;
 CREATE POLICY "Public can read barber schedules" ON barber_schedules
     FOR SELECT USING (true);
 
+DROP POLICY IF EXISTS "Authenticated users can manage barber schedules" ON barber_schedules;
 CREATE POLICY "Authenticated users can manage barber schedules" ON barber_schedules
     FOR ALL USING (auth.role() = 'authenticated');
 
 -- SERVICOS
+DROP POLICY IF EXISTS "Public can read active services" ON services;
 CREATE POLICY "Public can read active services" ON services
     FOR SELECT USING (active = true);
 
+DROP POLICY IF EXISTS "Authenticated users can manage services" ON services;
 CREATE POLICY "Authenticated users can manage services" ON services
     FOR ALL USING (auth.role() = 'authenticated');
 
 -- AGENDAMENTOS
+DROP POLICY IF EXISTS "Public can create appointments" ON appointments;
 CREATE POLICY "Public can create appointments" ON appointments
     FOR INSERT WITH CHECK (true);
 
+DROP POLICY IF EXISTS "Public can read appointments" ON appointments;
 CREATE POLICY "Public can read appointments" ON appointments
     FOR SELECT USING (true);
 
+DROP POLICY IF EXISTS "Authenticated users can manage appointments" ON appointments;
 CREATE POLICY "Authenticated users can manage appointments" ON appointments
     FOR UPDATE USING (auth.role() = 'authenticated');
 
+DROP POLICY IF EXISTS "Authenticated users can delete appointments" ON appointments;
 CREATE POLICY "Authenticated users can delete appointments" ON appointments
     FOR DELETE USING (auth.role() = 'authenticated');
 
 -- FERIADOS
+DROP POLICY IF EXISTS "Public can read holidays" ON holidays;
 CREATE POLICY "Public can read holidays" ON holidays
     FOR SELECT USING (true);
 
+DROP POLICY IF EXISTS "Authenticated users can manage holidays" ON holidays;
 CREATE POLICY "Authenticated users can manage holidays" ON holidays
     FOR ALL USING (auth.role() = 'authenticated');
 
@@ -121,26 +133,37 @@ CREATE POLICY "Authenticated users can manage holidays" ON holidays
 -- SEED: DADOS INICIAIS
 -- ============================================
 
--- Barbeiros
-INSERT INTO barbers (name, active, sort_order, works_holidays) VALUES
-('Rafael', true, 1, false),
-('Gabriel', true, 2, false),
-('Marcus Vinicius', true, 3, false);
+-- Barbeiros (so insere se nao existirem)
+INSERT INTO barbers (name, active, sort_order, works_holidays)
+SELECT name, true, sort_order, false FROM (VALUES
+    ('Rafael', 1),
+    ('Gabriel', 2),
+    ('Marcus Vinicius', 3)
+) AS v(name, sort_order)
+WHERE NOT EXISTS (SELECT 1 FROM barbers WHERE barbers.name = v.name);
 
 -- Horarios (Seg=1, Ter=2, Qua=3, Qui=4, Sex=5, Sab=6)
+-- So insere se ainda nao houver schedules para o barbeiro
 INSERT INTO barber_schedules (barber_id, day_of_week, start_time, end_time)
 SELECT b.id, d.day, '09:00', '19:00'
 FROM barbers b
 CROSS JOIN (SELECT generate_series(1,6) AS day) d
-WHERE b.name IN ('Rafael', 'Gabriel', 'Marcus Vinicius');
+WHERE b.name IN ('Rafael', 'Gabriel', 'Marcus Vinicius')
+  AND NOT EXISTS (
+      SELECT 1 FROM barber_schedules bs
+      WHERE bs.barber_id = b.id AND bs.day_of_week = d.day
+  );
 
--- Servicos
-INSERT INTO services (name, price, duration_min, active, sort_order, featured) VALUES
-('Corte (sobrancelha cortesia)', 43.00, 60, true, 1, false),
-('Corte + Barbaterapia (sobrancelha cortesia)', 75.00, 80, true, 2, true),
-('Barbaterapia (pezinho cortesia)', 43.00, 60, true, 3, false),
-('Orelha e Nariz com cera', 25.00, 30, true, 4, false),
-('Selagem', 50.00, 60, true, 5, false);
+-- Servicos (so insere se nao existirem)
+INSERT INTO services (name, price, duration_min, active, sort_order, featured)
+SELECT name, price, duration_min, true, sort_order, featured FROM (VALUES
+    ('Corte (sobrancelha cortesia)', 43.00, 60, 1, false),
+    ('Corte + Barbaterapia (sobrancelha cortesia)', 75.00, 80, 2, true),
+    ('Barbaterapia (pezinho cortesia)', 43.00, 60, 3, false),
+    ('Orelha e Nariz com cera', 25.00, 30, 4, false),
+    ('Selagem', 50.00, 60, 5, false)
+) AS v(name, price, duration_min, sort_order, featured)
+WHERE NOT EXISTS (SELECT 1 FROM services WHERE services.name = v.name);
 
 -- ============================================
 -- MIGRATION: Para projetos que ja tinham as tabelas antigas
@@ -163,9 +186,11 @@ CREATE TABLE IF NOT EXISTS barber_schedules (
 
 ALTER TABLE barber_schedules ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Public can read barber schedules" ON barber_schedules;
 CREATE POLICY "Public can read barber schedules" ON barber_schedules
     FOR SELECT USING (true);
 
+DROP POLICY IF EXISTS "Authenticated users can manage barber schedules" ON barber_schedules;
 CREATE POLICY "Authenticated users can manage barber schedules" ON barber_schedules
     FOR ALL USING (auth.role() = 'authenticated');
 
