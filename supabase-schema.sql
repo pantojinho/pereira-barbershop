@@ -7,15 +7,23 @@
 CREATE TABLE IF NOT EXISTS barbers (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     name TEXT NOT NULL,
-    schedule_start TIME NOT NULL DEFAULT '09:00',
-    schedule_end TIME NOT NULL DEFAULT '19:00',
-    work_days INTEGER[] NOT NULL DEFAULT '{1,2,3,4,5,6}',
     active BOOLEAN NOT NULL DEFAULT true,
     sort_order INTEGER NOT NULL DEFAULT 0,
+    works_holidays BOOLEAN NOT NULL DEFAULT false,
     created_at TIMESTAMPTZ DEFAULT now()
 );
 
--- 2. TABELA DE SERVICOS
+-- 2. TABELA DE HORARIOS POR DIA (cada barbeiro pode ter horario diferente por dia)
+CREATE TABLE IF NOT EXISTS barber_schedules (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    barber_id UUID NOT NULL REFERENCES barbers(id) ON DELETE CASCADE,
+    day_of_week SMALLINT NOT NULL CHECK (day_of_week BETWEEN 0 AND 6),
+    start_time TIME NOT NULL DEFAULT '09:00',
+    end_time TIME NOT NULL DEFAULT '19:00',
+    UNIQUE(barber_id, day_of_week)
+);
+
+-- 3. TABELA DE SERVICOS
 CREATE TABLE IF NOT EXISTS services (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     name TEXT NOT NULL,
@@ -27,7 +35,7 @@ CREATE TABLE IF NOT EXISTS services (
     created_at TIMESTAMPTZ DEFAULT now()
 );
 
--- 3. TABELA DE AGENDAMENTOS
+-- 4. TABELA DE AGENDAMENTOS
 CREATE TABLE IF NOT EXISTS appointments (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     barber_id UUID NOT NULL REFERENCES barbers(id) ON DELETE CASCADE,
@@ -44,62 +52,87 @@ CREATE TABLE IF NOT EXISTS appointments (
     created_at TIMESTAMPTZ DEFAULT now()
 );
 
--- 4. INDICE PARA BUSCAR AGENDAMENTOS POR DATA/BARBEIRO
+-- 5. TABELA DE FERIADOS
+CREATE TABLE IF NOT EXISTS holidays (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    date DATE NOT NULL UNIQUE,
+    description TEXT,
+    recurring BOOLEAN NOT NULL DEFAULT false,
+    created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- 6. INDICES
 CREATE INDEX IF NOT EXISTS idx_appointments_date_barber ON appointments(appointment_date, barber_id);
 CREATE INDEX IF NOT EXISTS idx_appointments_status ON appointments(status);
+CREATE INDEX IF NOT EXISTS idx_barber_schedules_barber ON barber_schedules(barber_id);
 
 -- ============================================
 -- ROW LEVEL SECURITY (RLS)
 -- ============================================
 
--- Habilitar RLS em todas as tabelas
 ALTER TABLE barbers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE barber_schedules ENABLE ROW LEVEL SECURITY;
 ALTER TABLE services ENABLE ROW LEVEL SECURITY;
 ALTER TABLE appointments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE holidays ENABLE ROW LEVEL SECURITY;
 
--- POLITICAS PARA BARBEIROS
--- Publico pode ler barbeiros ativos (para a pagina de agendamento)
+-- BARBEIROS
 CREATE POLICY "Public can read active barbers" ON barbers
     FOR SELECT USING (active = true);
 
--- Admins autenticados podem fazer tudo
 CREATE POLICY "Authenticated users can manage barbers" ON barbers
     FOR ALL USING (auth.role() = 'authenticated');
 
--- POLITICAS PARA SERVICOS
--- Publico pode ler servicos ativos
+-- BARBER SCHEDULES (publico le para agendamento)
+CREATE POLICY "Public can read barber schedules" ON barber_schedules
+    FOR SELECT USING (true);
+
+CREATE POLICY "Authenticated users can manage barber schedules" ON barber_schedules
+    FOR ALL USING (auth.role() = 'authenticated');
+
+-- SERVICOS
 CREATE POLICY "Public can read active services" ON services
     FOR SELECT USING (active = true);
 
--- Admins autenticados podem fazer tudo
 CREATE POLICY "Authenticated users can manage services" ON services
     FOR ALL USING (auth.role() = 'authenticated');
 
--- POLITICAS PARA AGENDAMENTOS
--- Publico pode criar agendamentos
+-- AGENDAMENTOS
 CREATE POLICY "Public can create appointments" ON appointments
     FOR INSERT WITH CHECK (true);
 
--- Publico pode ler agendamentos (para verificar horarios ocupados)
 CREATE POLICY "Public can read appointments" ON appointments
     FOR SELECT USING (true);
 
--- Admins autenticados podem atualizar e deletar agendamentos
 CREATE POLICY "Authenticated users can manage appointments" ON appointments
     FOR UPDATE USING (auth.role() = 'authenticated');
 
 CREATE POLICY "Authenticated users can delete appointments" ON appointments
     FOR DELETE USING (auth.role() = 'authenticated');
 
+-- FERIADOS
+CREATE POLICY "Public can read holidays" ON holidays
+    FOR SELECT USING (true);
+
+CREATE POLICY "Authenticated users can manage holidays" ON holidays
+    FOR ALL USING (auth.role() = 'authenticated');
+
 -- ============================================
 -- SEED: DADOS INICIAIS
 -- ============================================
 
 -- Barbeiros
-INSERT INTO barbers (name, schedule_start, schedule_end, work_days, active, sort_order) VALUES
-('Rafael', '09:00', '19:00', '{1,2,3,4,5,6}', true, 1),
-('Gabriel', '09:00', '19:00', '{1,2,3,4,5,6}', true, 2),
-('Marcus Vinicius', '09:00', '19:00', '{1,2,3,4,5,6}', true, 3);
+INSERT INTO barbers (name, active, sort_order, works_holidays) VALUES
+('Rafael', true, 1, false),
+('Gabriel', true, 2, false),
+('Marcus Vinicius', true, 3, false);
+
+-- Horarios (Seg=1, Ter=2, Qua=3, Qui=4, Sex=5, Sab=6)
+INSERT INTO barber_schedules (barber_id, day_of_week, start_time, end_time)
+SELECT b.id, d.day, '09:00', '19:00'
+FROM barbers b
+CROSS JOIN (SELECT generate_series(1,6) AS day) d
+WHERE b.name IN ('Rafael', 'Gabriel', 'Marcus Vinicius');
 
 -- Servicos
 INSERT INTO services (name, price, duration_min, active, sort_order, featured) VALUES
@@ -110,10 +143,41 @@ INSERT INTO services (name, price, duration_min, active, sort_order, featured) V
 ('Selagem', 50.00, 60, true, 5, false);
 
 -- ============================================
--- MIGRATION: Adicionar colunas em projetos existentes
--- Rode isto no SQL Editor se as tabelas ja existem
+-- MIGRATION: Para projetos que ja tinham as tabelas antigas
+-- Rode isto no SQL Editor se esta atualizando um projeto existente
 -- ============================================
 
--- ALTER TABLE services ADD COLUMN IF NOT EXISTS featured BOOLEAN NOT NULL DEFAULT false;
--- ALTER TABLE appointments ADD COLUMN IF NOT EXISTS obs TEXT;
--- UPDATE services SET featured = true WHERE name = 'Corte + Barbaterapia (sobrancelha cortesia)';
+-- 1. Adicionar works_holidays na tabela barbers
+-- ALTER TABLE barbers ADD COLUMN IF NOT EXISTS works_holidays BOOLEAN NOT NULL DEFAULT false;
+
+-- 2. Criar tabela barber_schedules e popular com dados antigos
+/*
+CREATE TABLE IF NOT EXISTS barber_schedules (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    barber_id UUID NOT NULL REFERENCES barbers(id) ON DELETE CASCADE,
+    day_of_week SMALLINT NOT NULL CHECK (day_of_week BETWEEN 0 AND 6),
+    start_time TIME NOT NULL DEFAULT '09:00',
+    end_time TIME NOT NULL DEFAULT '19:00',
+    UNIQUE(barber_id, day_of_week)
+);
+
+ALTER TABLE barber_schedules ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Public can read barber schedules" ON barber_schedules
+    FOR SELECT USING (true);
+
+CREATE POLICY "Authenticated users can manage barber schedules" ON barber_schedules
+    FOR ALL USING (auth.role() = 'authenticated');
+
+-- Migrar dados antigos (schedule_start/schedule_end/work_days -> barber_schedules)
+INSERT INTO barber_schedules (barber_id, day_of_week, start_time, end_time)
+SELECT b.id, unnest(b.work_days) AS day, b.schedule_start, b.schedule_end
+FROM barbers b
+WHERE b.work_days IS NOT NULL AND array_length(b.work_days, 1) > 0
+ON CONFLICT (barber_id, day_of_week) DO NOTHING;
+
+-- Colunas antigas podem ser removidas depois (opcional)
+-- ALTER TABLE barbers DROP COLUMN IF EXISTS schedule_start;
+-- ALTER TABLE barbers DROP COLUMN IF EXISTS schedule_end;
+-- ALTER TABLE barbers DROP COLUMN IF EXISTS work_days;
+*/

@@ -393,6 +393,62 @@ UPDATE services SET featured = true WHERE name = 'Corte + Barbaterapia (sobrance
 
 ---
 
+### Sessao 8 — 13/05/2026
+**Agente:** opencode (glm-5.1)
+**Tarefas realizadas:**
+- **Horario de trabalho individual por barbeiro:**
+  - Cada barbeiro ja tinha `schedule_start`, `schedule_end` e `work_days` na tabela `barbers`
+  - O formulario de editar barbeiro no admin agora deixa claro que cada um tem seu proprio horario
+  - O calendario de agendamento usa o horario do barbeiro selecionado
+- **Sistema de feriados:**
+  - Nova tabela `holidays` no Supabase (date, description, recurring)
+  - Nova aba "Feriados" no painel admin (CRUD completo)
+  - Feriados bloqueiam agendamentos no calendario
+  - Feriados recorrentes se repetem todo ano (ex: Natal, Ano Novo)
+  - RLS habilitado (publico le, admin gerencia)
+- **Horario de funcionamento dinamico na landing page:**
+  - Antes: hardcoded "Seg - Sab: 09h as 19h | Dom: Fechado"
+  - Agora: carrega do Supabase, calcula horarios reais baseado nos barbeiros ativos
+  - Agrupa dias com mesmo horario, mostra dias fechados
+  - Fallback para texto estatico se der erro
+- Sincronizou todos os arquivos com pasta `static/`
+
+**Arquivos modificados:**
+- `supabase-schema.sql` — Tabela holidays + RLS
+- `admin.html` — Nova aba "Feriados"
+- `admin.js` — CRUD de feriados (loadHolidays, renderHolidays, showHolidayForm, editHoliday, deleteHoliday)
+- `admin.css` — .section-description
+- `agendar.js` — loadHolidays(), isHoliday(), calendario verifica feriados
+- `index.html` — Horario dinamico via script Supabase (id="business-hours")
+- Todos sincronizados em `static/`
+
+**SQL para rodar no Supabase:**
+```sql
+CREATE TABLE IF NOT EXISTS holidays (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    date DATE NOT NULL UNIQUE,
+    description TEXT,
+    recurring BOOLEAN NOT NULL DEFAULT false,
+    created_at TIMESTAMPTZ DEFAULT now()
+);
+
+ALTER TABLE holidays ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Public can read holidays" ON holidays
+    FOR SELECT USING (true);
+
+CREATE POLICY "Authenticated users can manage holidays" ON holidays
+    FOR ALL USING (auth.role() = 'authenticated');
+```
+
+**Pendencias:**
+- Implementar notificacoes WhatsApp (Evolution API ou Z-API)
+- Chatbot WhatsApp para agendamento
+- Relatorios (faturamento, clientes recorrentes)
+- Sistema de avaliacao
+
+---
+
 ### Plano do Sistema Completo (Roadmap)
 
 #### Fase 1 — Concluida

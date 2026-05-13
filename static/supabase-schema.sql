@@ -117,3 +117,23 @@ INSERT INTO services (name, price, duration_min, active, sort_order, featured) V
 -- ALTER TABLE services ADD COLUMN IF NOT EXISTS featured BOOLEAN NOT NULL DEFAULT false;
 -- ALTER TABLE appointments ADD COLUMN IF NOT EXISTS obs TEXT;
 -- UPDATE services SET featured = true WHERE name = 'Corte + Barbaterapia (sobrancelha cortesia)';
+
+-- ============================================
+-- 5. TABELA DE FERIADOS
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS holidays (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    date DATE NOT NULL UNIQUE,
+    description TEXT,
+    recurring BOOLEAN NOT NULL DEFAULT false,
+    created_at TIMESTAMPTZ DEFAULT now()
+);
+
+ALTER TABLE holidays ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Public can read holidays" ON holidays
+    FOR SELECT USING (true);
+
+CREATE POLICY "Authenticated users can manage holidays" ON holidays
+    FOR ALL USING (auth.role() = 'authenticated');

@@ -69,6 +69,7 @@
             <button class="nav-tab" data-tab="appointments">Agendamentos</button>
             <button class="nav-tab" data-tab="barbers">Barbeiros</button>
             <button class="nav-tab" data-tab="services">Serviços</button>
+            <button class="nav-tab" data-tab="holidays">Feriados</button>
             <button class="nav-tab" data-tab="admins">Administradores</button>
         </nav>
 
@@ -156,6 +157,18 @@
                     <button id="btn-add-service" class="btn-primary btn-sm">+ Novo Serviço</button>
                 </div>
                 <div id="services-list" class="card-grid">
+                    <p class="empty-state">Carregando...</p>
+                </div>
+            </section>
+
+            <!-- TAB: FERIADOS -->
+            <section id="tab-holidays" class="tab-panel">
+                <div class="section-header">
+                    <h3>Feriados</h3>
+                    <button id="btn-add-holiday" class="btn-primary btn-sm">+ Novo Feriado</button>
+                </div>
+                <p class="section-description">Feriados bloqueiam agendamentos para todos os barbeiros. Feriados recorrentes se repetem todo ano.</p>
+                <div id="holidays-list" class="card-grid">
                     <p class="empty-state">Carregando...</p>
                 </div>
             </section>

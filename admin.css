@@ -955,6 +955,78 @@ body {
     accent-color: var(--green-dark);
 }
 
+/* ========== SCHEDULE GRID (per-day hours) ========== */
+
+.schedule-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 4px;
+}
+
+.schedule-row {
+    display: grid;
+    grid-template-columns: 120px 1fr auto 1fr;
+    gap: 8px;
+    align-items: center;
+    padding: 6px 0;
+    border-bottom: 1px solid var(--gray-100);
+}
+
+.schedule-row:last-child {
+    border-bottom: none;
+}
+
+.schedule-day-check {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    font-weight: 500;
+}
+
+.schedule-day-check input[type="checkbox"] {
+    accent-color: var(--green-dark);
+    width: 16px;
+    height: 16px;
+}
+
+.schedule-row input[type="time"] {
+    padding: 6px 8px;
+    border: 1.5px solid var(--gray-200);
+    border-radius: var(--radius);
+    font-size: 0.85rem;
+    font-family: var(--font-body);
+    color: var(--gray-800);
+    background: var(--white);
+    min-height: 36px;
+}
+
+.schedule-row input[type="time"]:disabled {
+    background: var(--gray-100);
+    color: var(--gray-400);
+    opacity: 0.6;
+}
+
+.schedule-row input[type="time"]:focus {
+    outline: none;
+    border-color: var(--green-dark);
+}
+
+.schedule-sep {
+    font-size: 0.8rem;
+    color: var(--gray-400);
+    text-align: center;
+}
+
+.section-description {
+    font-size: 0.85rem;
+    color: var(--gray-500);
+    margin-bottom: 16px;
+    line-height: 1.5;
+}
+
 /* ========== TOAST ========== */
 
 .toast-container {

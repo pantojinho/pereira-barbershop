@@ -77,7 +77,7 @@
                     </div>
                     <div class="contact-text">
                         <div class="contact-label">Horário</div>
-                        <div class="contact-value">Seg - Sáb: 09h às 19h<br>Dom: Fechado</div>
+                        <div class="contact-value" id="business-hours">Carregando...</div>
                     </div>
                 </div>
             </div>
@@ -103,5 +103,81 @@
         <p>&copy; 2026 Pereira's Barber Shop. Todos os direitos reservados.</p>
         <a href="admin.html" class="admin-link" title="Painel Administrativo"><i class="fas fa-lock"></i></a>
     </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    <script src="supabase-config.js"></script>
+    <script>
+    (function () {
+        var sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        var DAY_LABELS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+
+        async function loadBusinessHours() {
+            var el = document.getElementById('business-hours');
+            if (!el) return;
+            try {
+                var result = await sb.from('barbers').select('schedule_start, schedule_end, work_days').eq('active', true);
+                var barbers = result.data || [];
+                if (!barbers.length) {
+                    el.innerHTML = 'Fechado';
+                    return;
+                }
+
+                var dayMap = {};
+                barbers.forEach(function (b) {
+                    var start = b.schedule_start ? b.schedule_start.substring(0, 5) : '09:00';
+                    var end = b.schedule_end ? b.schedule_end.substring(0, 5) : '19:00';
+                    (b.work_days || []).forEach(function (d) {
+                        if (!dayMap[d]) {
+                            dayMap[d] = { start: start, end: end };
+                        } else {
+                            if (start < dayMap[d].start) dayMap[d].start = start;
+                            if (end > dayMap[d].end) dayMap[d].end = end;
+                        }
+                    });
+                });
+
+                var openDays = Object.keys(dayMap).map(Number).sort(function (a, b) { return a - b; });
+                if (!openDays.length) {
+                    el.innerHTML = 'Fechado';
+                    return;
+                }
+
+                var lines = [];
+                var i = 0;
+                while (i < openDays.length) {
+                    var rangeStart = openDays[i];
+                    var rangeEnd = rangeStart;
+                    var hours = dayMap[openDays[i]].start.replace(':', 'h') + ' às ' + dayMap[openDays[i]].end.replace(':', 'h');
+
+                    while (i + 1 < openDays.length && openDays[i + 1] === rangeEnd + 1 && dayMap[openDays[i + 1]].start === dayMap[rangeStart].start && dayMap[openDays[i + 1]].end === dayMap[rangeStart].end) {
+                        rangeEnd = openDays[i + 1];
+                        i++;
+                    }
+
+                    if (rangeStart === rangeEnd) {
+                        lines.push(DAY_LABELS[rangeStart] + ': ' + hours);
+                    } else {
+                        lines.push(DAY_LABELS[rangeStart] + ' - ' + DAY_LABELS[rangeEnd] + ': ' + hours);
+                    }
+                    i++;
+                }
+
+                var closedDays = [];
+                for (var d = 0; d <= 6; d++) {
+                    if (!dayMap[d]) closedDays.push(DAY_LABELS[d]);
+                }
+                if (closedDays.length) {
+                    lines.push(closedDays.join(', ') + ': Fechado');
+                }
+
+                el.innerHTML = lines.join('<br>');
+            } catch (err) {
+                el.innerHTML = 'Seg - Sáb: 09h às 19h<br>Dom: Fechado';
+            }
+        }
+
+        loadBusinessHours();
+    })();
+    </script>
 </body>
 </html>

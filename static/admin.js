@@ -182,6 +182,7 @@
         loadDashboard();
         loadBarbers();
         loadServices();
+        loadHolidays();
         loadAdmins();
         loadAppointments();
     }
@@ -644,6 +645,95 @@
         });
     }
 
+    // ========== HOLIDAYS CRUD ==========
+
+    async function loadHolidays() {
+        try {
+            var result = await sb.from('holidays').select('*').order('date', { ascending: true });
+            renderHolidays(result.data || []);
+        } catch (err) {
+            $('holidays-list').innerHTML = '<p class="empty-state">Erro ao carregar feriados.</p>';
+        }
+    }
+
+    function renderHolidays(holidays) {
+        var container = $('holidays-list');
+        if (!holidays.length) {
+            container.innerHTML = '<p class="empty-state">Nenhum feriado cadastrado.</p>';
+            return;
+        }
+        container.innerHTML = holidays.map(function (h) {
+            var recurringBadge = h.recurring ? '<span class="card-badge badge-featured">&#128260; Recorrente</span>' : '';
+            return '<div class="manage-card">' +
+                recurringBadge +
+                '<h4>' + formatDate(h.date) + '</h4>' +
+                '<div class="card-detail">' + escapeHTML(h.description || 'Feriado') + '</div>' +
+                '<div class="card-actions">' +
+                    '<button class="btn-outline btn-sm" onclick="AdminApp.editHoliday(\'' + jsString(h.id) + '\')">Editar</button>' +
+                    '<button class="btn-outline btn-sm btn-danger" onclick="AdminApp.deleteHoliday(\'' + jsString(h.id) + '\')">Excluir</button>' +
+                '</div>' +
+            '</div>';
+        }).join('');
+    }
+
+    function showHolidayForm(holiday) {
+        var isEdit = !!holiday;
+        var title = isEdit ? 'Editar Feriado' : 'Novo Feriado';
+        var date = isEdit ? holiday.date : '';
+        var desc = isEdit ? (holiday.description || '') : '';
+        var recurring = isEdit ? (holiday.recurring || false) : false;
+        var recurringChecked = recurring ? 'checked' : '';
+
+        var html = '<div class="form-group"><label>Data</label><input type="date" id="field-holiday-date" value="' + escapeHTML(date) + '" required></div>' +
+            '<div class="form-group"><label>Descrição</label><input type="text" id="field-holiday-desc" value="' + escapeHTML(desc) + '" placeholder="Ex: Natal, Ano Novo..."></div>' +
+            '<div class="form-group"><label class="checkbox-label"><input type="checkbox" id="field-holiday-recurring" ' + recurringChecked + '> Recorrente (repete todo ano)</label></div>';
+
+        showModal(title, html, async function () {
+            var newDate = $('field-holiday-date').value;
+            var newDesc = $('field-holiday-desc').value.trim();
+            var newRecurring = $('field-holiday-recurring').checked;
+
+            if (!newDate) {
+                toast('Informe a data.', 'error');
+                return;
+            }
+
+            var data = { date: newDate, description: newDesc || null, recurring: newRecurring };
+
+            var result;
+            if (isEdit) {
+                result = await sb.from('holidays').update(data).eq('id', holiday.id);
+            } else {
+                result = await sb.from('holidays').insert(data);
+            }
+
+            if (result.error) {
+                toast('Erro: ' + result.error.message, 'error');
+            } else {
+                hideModal();
+                toast(isEdit ? 'Feriado atualizado!' : 'Feriado adicionado!', 'success');
+                loadHolidays();
+            }
+        });
+    }
+
+    async function editHoliday(id) {
+        var result = await sb.from('holidays').select('*').eq('id', id).single();
+        if (result.data) showHolidayForm(result.data);
+    }
+
+    function deleteHoliday(id) {
+        showConfirm('Excluir Feriado', 'Tem certeza que deseja excluir este feriado?', async function () {
+            var result = await sb.from('holidays').delete().eq('id', id);
+            if (result.error) {
+                toast('Erro: ' + result.error.message, 'error');
+            } else {
+                toast('Feriado excluído.', 'success');
+                loadHolidays();
+            }
+        });
+    }
+
     // ========== ADMINS ==========
 
     async function loadAdmins() {
@@ -718,6 +808,7 @@
 
         $('btn-add-barber').addEventListener('click', function () { showBarberForm(null); });
         $('btn-add-service').addEventListener('click', function () { showServiceForm(null); });
+        $('btn-add-holiday').addEventListener('click', function () { showHolidayForm(null); });
         $('btn-add-admin').addEventListener('click', showAddAdminForm);
 
         $('filter-barber').addEventListener('change', function () { loadAppointments(1); });
@@ -744,6 +835,8 @@
         editService: editService,
         toggleService: toggleService,
         deleteService: deleteService,
+        editHoliday: editHoliday,
+        deleteHoliday: deleteHoliday,
         goToPage: function (p) { loadAppointments(p); }
     };
 

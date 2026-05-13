@@ -41,7 +41,7 @@
     }
 
     var DAY_NAMES = {
-        1: 'Seg', 2: 'Ter', 3: 'Qua', 4: 'Qui', 5: 'Sex', 6: 'Sab'
+        0: 'Dom', 1: 'Seg', 2: 'Ter', 3: 'Qua', 4: 'Qui', 5: 'Sex', 6: 'Sáb'
     };
 
     function toast(msg, type) {
@@ -52,13 +52,14 @@
         setTimeout(function () { el.remove(); }, 3000);
     }
 
-    function showModal(title, bodyHTML, onSave) {
+    function showModal(title, bodyHTML, onSave, onOpen) {
         $('modal-title').textContent = title;
         $('modal-body').innerHTML = bodyHTML;
         $('modal-overlay').style.display = 'flex';
         $('modal-save').onclick = function () {
             if (onSave) onSave();
         };
+        if (onOpen) onOpen();
     }
 
     function hideModal() {
@@ -182,6 +183,7 @@
         loadDashboard();
         loadBarbers();
         loadServices();
+        loadHolidays();
         loadAdmins();
         loadAppointments();
     }
@@ -392,15 +394,26 @@
 
     // ========== BARBERS CRUD ==========
 
+    var _barberSchedules = {};
+
     async function loadBarbers() {
         try {
             var result = await sb.from('barbers').select('*').order('sort_order').order('name');
-            renderBarbers(result.data || []);
+            var barbers = result.data || [];
+
+            var schedResult = await sb.from('barber_schedules').select('*');
+            _barberSchedules = {};
+            (schedResult.data || []).forEach(function (s) {
+                if (!_barberSchedules[s.barber_id]) _barberSchedules[s.barber_id] = [];
+                _barberSchedules[s.barber_id].push(s);
+            });
+
+            renderBarbers(barbers);
 
             var filterSelect = $('filter-barber');
             var currentVal = filterSelect.value;
             filterSelect.innerHTML = '<option value="">Todos os barbeiros</option>';
-            (result.data || []).forEach(function (b) {
+            barbers.forEach(function (b) {
                 filterSelect.innerHTML += '<option value="' + escapeHTML(b.id) + '">' + escapeHTML(b.name) + '</option>';
             });
             filterSelect.value = currentVal;
@@ -409,7 +422,7 @@
             if (dashboardSelect) {
                 var currentDashboardVal = dashboardSelect.value;
                 dashboardSelect.innerHTML = '<option value="">Todos os barbeiros</option>';
-                (result.data || []).filter(function (b) { return b.active; }).forEach(function (b) {
+                barbers.filter(function (b) { return b.active; }).forEach(function (b) {
                     dashboardSelect.innerHTML += '<option value="' + escapeHTML(b.id) + '">' + escapeHTML(b.name) + '</option>';
                 });
                 dashboardSelect.value = currentDashboardVal;
@@ -419,6 +432,30 @@
         }
     }
 
+    function getBarberScheduleSummary(barberId) {
+        var scheds = _barberSchedules[barberId] || [];
+        if (!scheds.length) return 'Sem horário configurado';
+        scheds.sort(function (a, b) { return a.day_of_week - b.day_of_week; });
+        var groups = [];
+        var i = 0;
+        while (i < scheds.length) {
+            var start = scheds[i];
+            var rangeEnd = start.day_of_week;
+            var hours = formatTime(start.start_time) + '-' + formatTime(start.end_time);
+            while (i + 1 < scheds.length && scheds[i + 1].day_of_week === rangeEnd + 1 && formatTime(scheds[i + 1].start_time) === formatTime(start.start_time) && formatTime(scheds[i + 1].end_time) === formatTime(start.end_time)) {
+                rangeEnd = scheds[i + 1].day_of_week;
+                i++;
+            }
+            if (start.day_of_week === rangeEnd) {
+                groups.push(DAY_NAMES[start.day_of_week] + ' ' + hours);
+            } else {
+                groups.push(DAY_NAMES[start.day_of_week] + '-' + DAY_NAMES[rangeEnd] + ' ' + hours);
+            }
+            i++;
+        }
+        return groups.join(', ');
+    }
+
     function renderBarbers(barbers) {
         var container = $('barbers-list');
         if (!barbers.length) {
@@ -426,14 +463,15 @@
             return;
         }
         container.innerHTML = barbers.map(function (b) {
-            var days = (b.work_days || []).map(function (d) { return DAY_NAMES[d] || d; }).join(', ');
             var badgeClass = b.active ? 'badge-active' : 'badge-inactive';
             var badgeText = b.active ? 'Ativo' : 'Inativo';
+            var scheduleStr = getBarberScheduleSummary(b.id);
+            var holidayBadge = b.works_holidays ? '<span class="card-badge badge-featured">&#128197; Trabalha feriados</span>' : '';
             return '<div class="manage-card ' + (b.active ? '' : 'inactive') + '">' +
                 '<span class="card-badge ' + badgeClass + '">' + badgeText + '</span>' +
+                holidayBadge +
                 '<h4>' + escapeHTML(b.name) + '</h4>' +
-                '<div class="card-detail">&#128336; ' + formatTime(b.schedule_start) + ' - ' + formatTime(b.schedule_end) + '</div>' +
-                '<div class="card-detail">&#128197; ' + days + '</div>' +
+                '<div class="card-detail">&#128336; ' + scheduleStr + '</div>' +
                 '<div class="card-actions">' +
                     '<button class="btn-outline btn-sm" onclick="AdminApp.editBarber(\'' + jsString(b.id) + '\')">Editar</button>' +
                     '<button class="btn-outline btn-sm" onclick="AdminApp.toggleBarber(\'' + jsString(b.id) + '\', ' + !b.active + ')">' + (b.active ? 'Desativar' : 'Ativar') + '</button>' +
@@ -443,50 +481,102 @@
         }).join('');
     }
 
-    function showBarberForm(barber) {
+    function showBarberForm(barber, schedules) {
         var isEdit = !!barber;
         var title = isEdit ? 'Editar Barbeiro' : 'Novo Barbeiro';
         var name = isEdit ? barber.name : '';
-        var start = isEdit ? formatTime(barber.schedule_start) : '09:00';
-        var end = isEdit ? formatTime(barber.schedule_end) : '19:00';
-        var workDays = isEdit ? (barber.work_days || []) : [1, 2, 3, 4, 5, 6];
+        var worksHolidays = isEdit ? (barber.works_holidays || false) : false;
+        var holidayChecked = worksHolidays ? 'checked' : '';
 
-        var daysHTML = '';
-        for (var d = 1; d <= 6; d++) {
-            var checked = workDays.indexOf(d) >= 0 ? 'checked' : '';
-            daysHTML += '<label class="work-day-option"><input type="checkbox" name="work_day" value="' + d + '" ' + checked + '> ' + DAY_NAMES[d] + '</label>';
-        }
+        var schedMap = {};
+        (schedules || []).forEach(function (s) {
+            schedMap[s.day_of_week] = { start: formatTime(s.start_time), end: formatTime(s.end_time) };
+        });
+
+        var defaultStart = '09:00';
+        var defaultEnd = '19:00';
+        var allDays = [
+            { num: 0, name: 'Domingo' },
+            { num: 1, name: 'Segunda' },
+            { num: 2, name: 'Terça' },
+            { num: 3, name: 'Quarta' },
+            { num: 4, name: 'Quinta' },
+            { num: 5, name: 'Sexta' },
+            { num: 6, name: 'Sábado' }
+        ];
+
+        var scheduleHTML = '';
+        allDays.forEach(function (day) {
+            var hasDay = schedMap[day.num];
+            var checked = hasDay ? 'checked' : '';
+            var st = hasDay ? hasDay.start : defaultStart;
+            var en = hasDay ? hasDay.end : defaultEnd;
+            scheduleHTML += '<div class="schedule-row">' +
+                '<label class="schedule-day-check"><input type="checkbox" class="day-check" data-day="' + day.num + '" ' + checked + '> ' + day.name + '</label>' +
+                '<input type="time" class="schedule-time-start" data-day="' + day.num + '" value="' + st + '" ' + (hasDay ? '' : 'disabled') + '>' +
+                '<span class="schedule-sep">às</span>' +
+                '<input type="time" class="schedule-time-end" data-day="' + day.num + '" value="' + en + '" ' + (hasDay ? '' : 'disabled') + '>' +
+            '</div>';
+        });
 
         var html = '<div class="form-group"><label>Nome</label><input type="text" id="field-name" value="' + escapeHTML(name) + '" required></div>' +
-            '<div class="form-group"><label>Horário Início</label><input type="time" id="field-start" value="' + start + '"></div>' +
-            '<div class="form-group"><label>Horário Fim</label><input type="time" id="field-end" value="' + end + '"></div>' +
-            '<div class="form-group"><label>Dias de Trabalho</label><div class="work-days-grid">' + daysHTML + '</div></div>';
+            '<div class="form-group"><label>Horários por dia da semana</label><div class="schedule-grid">' + scheduleHTML + '</div></div>' +
+            '<div class="form-group"><label class="checkbox-label"><input type="checkbox" id="field-works-holidays" ' + holidayChecked + '> Trabalha em feriados</label></div>';
 
-        showModal(title, html, async function () {
-            var newName = $('field-name').value.trim();
-            if (!newName) { toast('Nome e obrigatorio.', 'error'); return; }
-
-            var selectedDays = [];
-            qsa('input[name="work_day"]:checked').forEach(function (cb) {
-                selectedDays.push(parseInt(cb.value));
+        showModal(title, html, function () {
+            qsa('.day-check').forEach(function (cb) {
+                var day = cb.getAttribute('data-day');
+                var startInput = document.querySelector('.schedule-time-start[data-day="' + day + '"]');
+                var endInput = document.querySelector('.schedule-time-end[data-day="' + day + '"]');
+                startInput.disabled = !cb.checked;
+                endInput.disabled = !cb.checked;
             });
-            selectedDays.sort();
+        }, async function () {
+            var newName = $('field-name').value.trim();
+            if (!newName) { toast('Nome é obrigatório.', 'error'); return; }
 
-            var data = {
+            var barberData = {
                 name: newName,
-                schedule_start: $('field-start').value,
-                schedule_end: $('field-end').value,
-                work_days: selectedDays
+                works_holidays: $('field-works-holidays').checked
             };
+
+            var scheduleEntries = [];
+            qsa('.day-check:checked').forEach(function (cb) {
+                var day = parseInt(cb.getAttribute('data-day'));
+                var st = document.querySelector('.schedule-time-start[data-day="' + day + '"]').value;
+                var en = document.querySelector('.schedule-time-end[data-day="' + day + '"]').value;
+                if (st && en) {
+                    scheduleEntries.push({ day_of_week: day, start_time: st, end_time: en });
+                }
+            });
+
+            if (!scheduleEntries.length) {
+                toast('Selecione pelo menos um dia de trabalho.', 'error');
+                return;
+            }
 
             var result;
             if (isEdit) {
-                result = await sb.from('barbers').update(data).eq('id', barber.id);
+                result = await sb.from('barbers').update(barberData).eq('id', barber.id);
+                if (!result.error) {
+                    await sb.from('barber_schedules').delete().eq('barber_id', barber.id);
+                    var insertData = scheduleEntries.map(function (s) {
+                        return { barber_id: barber.id, day_of_week: s.day_of_week, start_time: s.start_time, end_time: s.end_time };
+                    });
+                    await sb.from('barber_schedules').insert(insertData);
+                }
             } else {
                 var maxResult = await sb.from('barbers').select('sort_order').order('sort_order', { ascending: false }).limit(1);
-                data.sort_order = (maxResult.data && maxResult.data.length) ? (maxResult.data[0].sort_order + 1) : 1;
-                data.active = true;
-                result = await sb.from('barbers').insert(data);
+                barberData.sort_order = (maxResult.data && maxResult.data.length) ? (maxResult.data[0].sort_order + 1) : 1;
+                barberData.active = true;
+                result = await sb.from('barbers').insert(barberData).select();
+                if (!result.error && result.data && result.data.length) {
+                    var newBarberId = result.data[0].id;
+                    var insertData = scheduleEntries.map(function (s) {
+                        return { barber_id: newBarberId, day_of_week: s.day_of_week, start_time: s.start_time, end_time: s.end_time };
+                    });
+                    await sb.from('barber_schedules').insert(insertData);
+                }
             }
 
             if (result.error) {
@@ -502,7 +592,10 @@
 
     async function editBarber(id) {
         var result = await sb.from('barbers').select('*').eq('id', id).single();
-        if (result.data) showBarberForm(result.data);
+        if (result.data) {
+            var schedResult = await sb.from('barber_schedules').select('*').eq('barber_id', id);
+            showBarberForm(result.data, schedResult.data || []);
+        }
     }
 
     async function toggleBarber(id, active) {
@@ -644,6 +737,95 @@
         });
     }
 
+    // ========== HOLIDAYS CRUD ==========
+
+    async function loadHolidays() {
+        try {
+            var result = await sb.from('holidays').select('*').order('date', { ascending: true });
+            renderHolidays(result.data || []);
+        } catch (err) {
+            $('holidays-list').innerHTML = '<p class="empty-state">Erro ao carregar feriados.</p>';
+        }
+    }
+
+    function renderHolidays(holidays) {
+        var container = $('holidays-list');
+        if (!holidays.length) {
+            container.innerHTML = '<p class="empty-state">Nenhum feriado cadastrado.</p>';
+            return;
+        }
+        container.innerHTML = holidays.map(function (h) {
+            var recurringBadge = h.recurring ? '<span class="card-badge badge-featured">&#128260; Recorrente</span>' : '';
+            return '<div class="manage-card">' +
+                recurringBadge +
+                '<h4>' + formatDate(h.date) + '</h4>' +
+                '<div class="card-detail">' + escapeHTML(h.description || 'Feriado') + '</div>' +
+                '<div class="card-actions">' +
+                    '<button class="btn-outline btn-sm" onclick="AdminApp.editHoliday(\'' + jsString(h.id) + '\')">Editar</button>' +
+                    '<button class="btn-outline btn-sm btn-danger" onclick="AdminApp.deleteHoliday(\'' + jsString(h.id) + '\')">Excluir</button>' +
+                '</div>' +
+            '</div>';
+        }).join('');
+    }
+
+    function showHolidayForm(holiday) {
+        var isEdit = !!holiday;
+        var title = isEdit ? 'Editar Feriado' : 'Novo Feriado';
+        var date = isEdit ? holiday.date : '';
+        var desc = isEdit ? (holiday.description || '') : '';
+        var recurring = isEdit ? (holiday.recurring || false) : false;
+        var recurringChecked = recurring ? 'checked' : '';
+
+        var html = '<div class="form-group"><label>Data</label><input type="date" id="field-holiday-date" value="' + escapeHTML(date) + '" required></div>' +
+            '<div class="form-group"><label>Descrição</label><input type="text" id="field-holiday-desc" value="' + escapeHTML(desc) + '" placeholder="Ex: Natal, Ano Novo..."></div>' +
+            '<div class="form-group"><label class="checkbox-label"><input type="checkbox" id="field-holiday-recurring" ' + recurringChecked + '> Recorrente (repete todo ano)</label></div>';
+
+        showModal(title, html, async function () {
+            var newDate = $('field-holiday-date').value;
+            var newDesc = $('field-holiday-desc').value.trim();
+            var newRecurring = $('field-holiday-recurring').checked;
+
+            if (!newDate) {
+                toast('Informe a data.', 'error');
+                return;
+            }
+
+            var data = { date: newDate, description: newDesc || null, recurring: newRecurring };
+
+            var result;
+            if (isEdit) {
+                result = await sb.from('holidays').update(data).eq('id', holiday.id);
+            } else {
+                result = await sb.from('holidays').insert(data);
+            }
+
+            if (result.error) {
+                toast('Erro: ' + result.error.message, 'error');
+            } else {
+                hideModal();
+                toast(isEdit ? 'Feriado atualizado!' : 'Feriado adicionado!', 'success');
+                loadHolidays();
+            }
+        });
+    }
+
+    async function editHoliday(id) {
+        var result = await sb.from('holidays').select('*').eq('id', id).single();
+        if (result.data) showHolidayForm(result.data);
+    }
+
+    function deleteHoliday(id) {
+        showConfirm('Excluir Feriado', 'Tem certeza que deseja excluir este feriado?', async function () {
+            var result = await sb.from('holidays').delete().eq('id', id);
+            if (result.error) {
+                toast('Erro: ' + result.error.message, 'error');
+            } else {
+                toast('Feriado excluído.', 'success');
+                loadHolidays();
+            }
+        });
+    }
+
     // ========== ADMINS ==========
 
     async function loadAdmins() {
@@ -718,6 +900,7 @@
 
         $('btn-add-barber').addEventListener('click', function () { showBarberForm(null); });
         $('btn-add-service').addEventListener('click', function () { showServiceForm(null); });
+        $('btn-add-holiday').addEventListener('click', function () { showHolidayForm(null); });
         $('btn-add-admin').addEventListener('click', showAddAdminForm);
 
         $('filter-barber').addEventListener('change', function () { loadAppointments(1); });
@@ -744,6 +927,8 @@
         editService: editService,
         toggleService: toggleService,
         deleteService: deleteService,
+        editHoliday: editHoliday,
+        deleteHoliday: deleteHoliday,
         goToPage: function (p) { loadAppointments(p); }
     };
 

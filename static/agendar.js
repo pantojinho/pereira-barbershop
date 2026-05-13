@@ -25,6 +25,7 @@
     var selectedDate = null;
     var BARBERS = {};
     var SERVICES_DB = [];
+    var HOLIDAYS = [];
     var SLOT_INTERVAL = 30;
 
     function $(id) { return document.getElementById(id); }
@@ -39,6 +40,7 @@
     async function init() {
         await loadBarbers();
         await loadServices();
+        await loadHolidays();
         setupCalendar();
         setupNav();
         updateNavButtons();
@@ -114,6 +116,29 @@
         }
     }
 
+    async function loadHolidays() {
+        try {
+            var result = await sb.from('holidays').select('*');
+            HOLIDAYS = result.data || [];
+        } catch (err) {
+            HOLIDAYS = [];
+        }
+    }
+
+    function isHoliday(dateStr) {
+        var parts = dateStr.split('-');
+        var monthDay = parts[1] + '-' + parts[2];
+        for (var i = 0; i < HOLIDAYS.length; i++) {
+            var h = HOLIDAYS[i];
+            if (h.date === dateStr) return true;
+            if (h.recurring) {
+                var hParts = h.date.split('-');
+                if (hParts[1] + '-' + hParts[2] === monthDay) return true;
+            }
+        }
+        return false;
+    }
+
     function setupBarbers() {
         var options = $$(".barber-option");
         options.forEach(function (opt) {
@@ -172,14 +197,16 @@
             var isPast = date < today;
             var isToday = date.getTime() === today.getTime();
             var isSunday = dayOfWeek === 0;
+            var dateStr = year + "-" + String(month + 1).padStart(2, "0") + "-" + String(d).padStart(2, "0");
             var barberWorks = barberSchedule ? barberSchedule.days.indexOf(dayOfWeek) !== -1 : true;
-            var disabled = isPast || isSunday || !barberWorks;
+            var isHolidayDay = isHoliday(dateStr);
+            var disabled = isPast || isSunday || !barberWorks || isHolidayDay;
             var selClass = selectedDate && selectedDate.getTime() === date.getTime() ? " selected" : "";
             var todayClass = isToday ? " today" : "";
 
             html += '<button class="day' + selClass + todayClass + (disabled ? " disabled" : "") + '"' +
                 (disabled ? " disabled" : "") +
-                ' data-date="' + year + "-" + String(month + 1).padStart(2, "0") + "-" + String(d).padStart(2, "0") + '">' +
+                ' data-date="' + dateStr + '">' +
                 d + "</button>";
         }
 
