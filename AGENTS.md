@@ -666,113 +666,6 @@ ON CONFLICT (barber_id, day_of_week) DO NOTHING;
 - O schema SQL do Supabase está correto e não há bugs nas tabelas ou funções
 
 **Pendências:**
-- Implementar notificações WhatsApp (Evolution API ou Z-API)
-- Chatbot WhatsApp para agendamento
-- Relatórios (faturamento, clientes recorrentes)
-- Sistema de avaliação
-
----
-
-### Sessao 13 — 13/05/2026
-**Agente:** opencode (glm-5.1)
-**Tarefas realizadas:**
-- **Gerenciamento de administradores pelo painel (CRUD completo):**
-  - `loadAdmins()` reescrita: agora lista todos os admins da tabela `admins` com avatar, email e badge "Ativo"
-  - Mostra "(você)" ao lado do admin logado
-  - Admin logado NÃO pode se auto-remover
-- **Adicionar novo admin:**
-  - Botão "+ Novo Admin" abre formulário com email + senha
-  - Usa `sb.auth.signUp()` para criar o usuário no Supabase Auth
-  - Após criar, insere automaticamente na tabela `admins` (user_id, email, active)
-  - Validação: email obrigatório, senha mínimo 6 caracteres
-  - Trata caso de email já cadastrado
-- **Resetar senha:**
-  - Botão "chave" (ícone key) ao lado de cada admin
-  - Usa `sb.auth.resetPasswordForEmail()` que envia email de redefinição de senha
-  - O admin recebe o email e redefine a senha sozinho
-  - redirectTo aponta para admin.html
-- **Remover admin:**
-  - Botão "lixo" (ícone trash) ao lado de cada admin (exceto o logado)
-  - Remove da tabela `admins` — o usuário continua no Supabase Auth mas perde acesso ao painel
-  - Confirmação antes de remover
-- **RLS atualizada para tabela admins:**
-  - Adicionadas policies de INSERT e DELETE para admins autenticados
-  - `Admins can insert admins` — WITH CHECK (is_current_admin())
-  - `Admins can delete admins` — USING (is_current_admin())
-- CSS: adicionado `.admin-card-actions` (flex, gap: 8px)
-- Sincronizou arquivos com pasta `static/`
-
-**Arquivos modificados:**
-- `admin.js` — loadAdmins, showAddAdminForm, addNewAdmin, removeAdmin, resetAdminPassword
-- `admin.css` — .admin-card-actions
-- `supabase-security-hardening.sql` — Policies INSERT/DELETE na tabela admins
-- Todos sincronizados em `static/`
-
-**SQL para rodar no Supabase (RLS da tabela admins):**
-```sql
-DROP POLICY IF EXISTS "Admins can insert admins" ON public.admins;
-DROP POLICY IF EXISTS "Admins can delete admins" ON public.admins;
-CREATE POLICY "Admins can insert admins" ON public.admins
-    FOR INSERT TO authenticated
-    WITH CHECK (public.is_current_admin());
-CREATE POLICY "Admins can delete admins" ON public.admins
-    FOR DELETE TO authenticated
-    USING (public.is_current_admin());
-```
-
-**Notas:**
-- O signUp pode exigir confirmação de email dependendo da config do Supabase
-- O reset de senha envia um email automático do Supabase
-- O usuário `recadosrafael@gmail.com` precisa ser adicionado à tabela admins:
-  ```sql
-  INSERT INTO public.admins (user_id, email, active)
-  VALUES ('4c0d66d6-0064-41a1-b386-d4dbba4329eb', 'recadosrafael@gmail.com', true)
-  ON CONFLICT (user_id) DO UPDATE SET email = EXCLUDED.email, active = true;
-  ```
-
-**Pendências:**
-- Implementar notificações WhatsApp (Evolution API ou Z-API)
-- Chatbot WhatsApp para agendamento
-- Relatórios (faturamento, clientes recorrentes)
-- Sistema de avaliação
-
----
-
-### Sessão 14 — 13/05/2026
-**Agente:** opencode (glm-5.1)
-**Tarefas realizadas:**
-- **Correcao do formulario de horarios do barbeiro (bug critico):**
-  - Problema: ao editar barbeiro, os checkboxes de dias da semana nao habilitavam/desabilitavam os campos de horario ao clicar
-  - Causa: o callback `onOpen` do `showBarberForm` so definia o estado inicial dos inputs mas NAO adicionava `change` event listeners nos checkboxes
-  - Solucao: criada funcao `toggleDayInputs()` que e chamada no `onOpen` e tambem vinculada ao evento `change` de cada checkbox
-  - Agora ao marcar/desmarcar um dia, os campos de horario habilitam/desabilitam corretamente em tempo real
-- **Remocao completa da aba Feriados:**
-  - Removido tab "Feriados" do `admin.html`
-  - Removida secao `tab-holidays` inteira do `admin.html`
-  - Removidas todas as funcoes CRUD de feriados do `admin.js` (loadHolidays, renderHolidays, showHolidayForm, editHoliday, deleteHoliday)
-  - Removido campo `works_holidays` do formulario de barbeiro e do card de barbeiro
-  - Removido `loadHolidays()` de `showAdminPanel`
-  - Removido event listener do botao `btn-add-holiday`
-  - Removidas referencias a feriados do `AdminApp` exports
-- **Remocao de feriados do agendamento (agendar.js):**
-  - Removida variavel `HOLIDAYS`
-  - Removida chamada `loadHolidays()` do init
-  - Removidas funcoes `loadHolidays()` e `isHoliday()`
-  - Removida verificacao de feriado no calendario (blockedByHoliday)
-  - Removido campo `works_holidays` do objeto BARBERS
-- Sincronizou todos os arquivos com pasta `static/`
-
-**Motivo da remocao dos feriados:**
-- O sistema de feriados bloqueava todos os barbeiros igualmente, mas na pratica cada barbeiro decide se trabalha ou nao em feriados dependendo da semana
-- Nao e util ter uma lista fixa de feriados — cada um gerencia seus proprios horarios pela tabela `barber_schedules`
-
-**Arquivos modificados:**
-- `admin.js` — Fix checkbox toggleDayInputs + removido holidays CRUD + works_holidays
-- `admin.html` — Removido tab e secao Feriados
-- `agendar.js` — Removido HOLIDAYS, loadHolidays, isHoliday, works_holidays
-- Todos sincronizados em `static/`
-
-**Pendencias:**
 - Implementar notificacoes WhatsApp (Evolution API ou Z-API)
 - Chatbot WhatsApp para agendamento
 - Relatorios (faturamento, clientes recorrentes)
@@ -780,49 +673,7 @@ CREATE POLICY "Admins can delete admins" ON public.admins
 
 ---
 
-### Sessão 15 — 13/05/2026 (noite)
-**Agente:** opencode (glm-5.1)
-**Tarefas realizadas:**
-- **Melhoria do formulario de horarios do barbeiro para mobile (UX critica):**
-  - Problema: o formulario de horarios por dia usava layout de grid (1 linha com checkbox + 3 inputs), o que era ruim no celular
-  - Solucao: mudou de layout horizontal para vertical empilhado
-  - Cada dia agora e um bloco independente com:
-    - Checkbox do dia no topo (com font-size maior e mais spacing)
-    - Inputs de horario abaixo do checkbox (empilhados horizontalmente)
-  - Touch targets aumentados:
-    - Checkbox: 22x22px (antes 16x16px)
-    - Inputs de horario: min-height 44px (antes 36px)
-    - Padding geral aumentado
-  - Visual melhorado:
-    - Cada dia tem fundo creme (`var(--gray-100)`) e borda
-    - Border-radius aplicado em cada bloco
-    - Labels mais legiveis (font-weight 600, color dark)
-  - HTML reestruturado:
-    - Adicionado wrapper `.time-inputs` ao redor dos inputs de horario
-    - Flexbox para alinhamento dos inputs de horario
-- Sincronizou arquivos com pasta `static/`
-- Commit e push para o GitHub (`f786498`)
-
-**Arquivos modificados:**
-- `admin.css` — CSS reescrito para `.schedule-grid`, `.schedule-row`, `.schedule-day-check`, `.time-inputs`
-- `admin.js` — HTML gerado pela `showBarberForm` atualizado com wrapper `.time-inputs`
-- `static/admin.css` — Sincronizado
-- `static/admin.js` — Sincronizado
-
-**Notas importantes:**
-- O formulario agora funciona muito melhor no celular com touch targets maiores e layout vertical
-- Cada dia e claramente separado visualmente, facilitando a navegacao
-- A estrutura CSS e flexivel e funciona bem em todos os tamanhos de tela
-
-**Pendencias:**
-- Implementar notificacoes WhatsApp (Evolution API ou Z-API)
-- Chatbot WhatsApp para agendamento
-- Relatorios (faturamento, clientes recorrentes)
-- Sistema de avaliacao
-
----
-
-### Sessão 16 — 13/05/2026
+### Sessão 17 — 13/05/2026
 **Agente:** opencode (glm-4.7)
 **Tarefas realizadas:**
 - **Modal de detalhes do agendamento com UX aprimorada:**
@@ -850,19 +701,24 @@ CREATE POLICY "Admins can delete admins" ON public.admins
   - Mais contexto antes de tomar decisões importantes
   - Telefone exibido na lista de agendamentos (mobile-friendly)
 - Sincronizou arquivos com pasta `static/`
-- Commit e push para o GitHub (`eaa60c0`)
+- Commit e push para o GitHub (`aebfcf0`)
 
 **Arquivos modificados:**
-- `admin.js` — showAppointmentDetails, closeAppointmentDetails, confirmAppointment, cancelAppointmentFromDetails, confirmCancel, deleteAppointment, getWhatsAppLink, getWhatsAppCancelLink; renderAppointmentsList atualizado com onclick no card; completeAppointment refatorada
+- `admin.html` — Adicionado modal de detalhes do agendamento (`appointment-details-overlay`)
+- `admin.js` — showAppointmentDetails, closeAppointmentDetails, confirmAppointment, cancelAppointmentFromDetails, confirmCancel, deleteAppointment, getWhatsAppLink, getWhatsAppCancelLink; renderAppointmentsList atualizado com onclick no card; completeAppointment refatorada; exports do AdminApp atualizados
+- `admin.css` — Estilos para modal de detalhes (.modal-appointment-details, .appointment-detail-item, .appointment-detail-whatsapp-link, .appointment-detail-cancel-link, .appointment-detail-actions, etc.); cards clicáveis com cursor pointer
+- `static/admin.html` — Sincronizado
 - `static/admin.js` — Sincronizado
+- `static/admin.css` — Sincronizado
 
 **Notas importantes:**
 - O modal de detalhes fornece todas as informações em um só lugar, facilitando decisões
 - O fluxo de cancelamento exige que o admin notifique o cliente antes de confirmar, reduzindo problemas de comunicação
 - Links do WhatsApp são pré-formatados com mensagens personalizadas
 - A lista de agendamentos fica mais limpa sem múltiplos botões em cada card
+- A exclusão de agendamentos do histórico é permanente (DELETE no Supabase)
 
-**Pendencias:**
+**Pendências:**
 - Implementar notificacoes WhatsApp (Evolution API ou Z-API)
 - Chatbot WhatsApp para agendamento
 - Relatorios (faturamento, clientes recorrentes)

@@ -553,7 +553,7 @@ CREATE TABLE IF NOT EXISTS barber_schedules (
 );
 ALTER TABLE barber_schedules ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Public can read barber schedules" ON barber_schedules FOR SELECT USING (true);
-CREATE POLICY "Authenticated users can manage barber schedules" ON barber_schedules FOR ALL USING (auth.role() = 'authenticated');
+CREATE POLICY "Authenticated users can manage barber schedules" ON barber_schedules FOR ALL USING (auth.role() = 'authenticated'));
 
 -- 3. Migrar dados antigos (schedule_start/schedule_end/work_days -> barber_schedules)
 INSERT INTO barber_schedules (barber_id, day_of_week, start_time, end_time)
@@ -577,6 +577,148 @@ ON CONFLICT (barber_id, day_of_week) DO NOTHING;
 - Todos sincronizados em `static/`
 
 **Pendencias:**
+- Implementar notificacoes WhatsApp (Evolution API ou Z-API)
+- Chatbot WhatsApp para agendamento
+- Relatorios (faturamento, clientes recorrentes)
+- Sistema de avaliacao
+
+---
+
+### Sessao 11 — 13/05/2026
+**Agente:** opencode (glm-5.1)
+**Tarefas realizadas:**
+- **Correcao: exibir campo obs no dashboard admin:**
+  - Antes: o campo obs estava sendo salvo no banco (Sessao 7) mas NAO era exibido no dashboard admin
+  - Agora: a obs aparece nos cards de agendamento (Dashboard e aba Agendamentos)
+  - A obs e mostrada como um badge destacado com cor de aviso (warning/yellow) abaixo dos detalhes do agendamento
+  - A obs aparece com icone de envelope (📧) e texto destacado para facilitar leitura
+- **Implementacao:**
+  - `admin.js` — Funcao `renderAppointmentsList()` modificada para verificar `a.obs` e criar elemento HTML `.appointment-obs`
+  - `admin.css` — Novo estilo `.appointment-obs` com cor warning/background-light, padding, borda arredondada
+  - A obs so aparece se o cliente preencheu o campo durante o agendamento
+- Sincronizou `admin.js` e `admin.css` com pasta `static/`
+- Commit e push para o GitHub (`4c7b26a`)
+
+**Arquivos modificados:**
+- `admin.js` — `renderAppointmentsList()` adiciona obsHtml quando a.obs existe
+- `admin.css` — Novo estilo `.appointment-obs` (cor warning, destaque visual)
+- `static/admin.js` — Sincronizado
+- `static/admin.css` — Sincronizado
+
+**CSS adicionado:**
+```css
+.appointment-obs {
+    font-size: 0.8rem;
+    color: var(--warning);
+    background: var(--warning-light);
+    padding: 4px 10px;
+    border-radius: 6px;
+    margin-top: 4px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    max-width: 100%;
+    word-break: break-word;
+}
+```
+
+**Pendencias:**
+- Implementar notificacoes WhatsApp (Evolution API ou Z-API)
+- Chatbot WhatsApp para agendamento
+- Relatorios (faturamento, clientes recorrentes)
+- Sistema de avaliacao
+
+---
+
+### Sessao 12 — 13/05/2026
+**Agente:** opencode (glm-5.1)
+**Tarefas realizadas:**
+- **Correção do botão voltar na página de agendamento:**
+  - Problema: o botão voltar (.booking-nav) estava desaparecendo em alguns casos
+  - Solução: mudou de `position: sticky` para `position: fixed` com `bottom: 0` e `left: 50%` + `transform: translateX(-50%)`
+  - Aumentado z-index de 20 para 100 para garantir que fique acima de outros elementos
+  - Aumentado a opacidade do background de 80% para 90% para melhor visibilidade
+- **Verificação do favicon:**
+  - Favicon.svg está correto e existe na raiz do projeto
+  - Arquivo tem 402 bytes e formato SVG válido
+  - Se o favicon não aparecer, pode ser cache do navegador (limpar cache ou abrir em janela anônima)
+- **Verificação do schema Supabase:**
+  - Tabelas do Supabase verificadas e confirmadas corretas
+  - barber_schedules (id, barber_id, day_of_week, start_time, end_time)
+  - holidays (id, date, description, recurring)
+  - barbers (id, name, active, sort_order, works_holidays)
+  - services (id, name, price, duration_min, featured, active, sort_order)
+  - appointments (id, barber_id, service_ids, service_names, appointment_date, appointment_time, client_name, client_phone, obs, status, total_price, total_duration)
+  - Funções RPC (get_public_booked_slots, create_public_appointment) verificadas
+  - RLS e security hardening verificados
+- Sincronizou arquivos modificados com pasta `static/`
+
+**Arquivos modificados:**
+- `agendar.css` — Booking-nav mudou de sticky para fixed, z-index aumentado
+- `index.html` — Favicon verificado e mantido (sem mudanças necessárias)
+- `static/agendar.css` — Sincronizado
+- `static/index.html` — Sincronizado
+
+**Notas importantes:**
+- O botão voltar agora fica fixo na parte inferior da tela em todos os passos do agendamento
+- O booking-nav não é mais afetado por elementos com position sticky (como services-summary no passo 2)
+- Se o favicon não aparecer no navegador, é necessário limpar o cache ou testar em janela anônima
+- O schema SQL do Supabase está correto e não há bugs nas tabelas ou funções
+
+**Pendências:**
+- Implementar notificacoes WhatsApp (Evolution API ou Z-API)
+- Chatbot WhatsApp para agendamento
+- Relatorios (faturamento, clientes recorrentes)
+- Sistema de avaliacao
+
+---
+
+### Sessão 17 — 13/05/2026
+**Agente:** opencode (glm-4.7)
+**Tarefas realizadas:**
+- **Modal de detalhes do agendamento com UX aprimorada:**
+  - Cards de agendamento agora sao clicaveis para abrir modal de detalhes completos
+  - Botões de ação direta (concluir, cancelar, WhatsApp) removidos da lista para evitar ações acidentais
+  - Modal exibe todas as informações: cliente, telefone, barbeiro, serviço(s), data, hora, total, observações
+  - Status badge grande e colorido no topo do modal
+- **Links do WhatsApp no modal:**
+  - Botão "WhatsApp" abre conversa normal com mensagem personalizada
+  - Ao cancelar agendamento, exibe alerta para notificar cliente primeiro
+  - Link pré-formatado para notificação de cancelamento com todos os detalhes (serviço, data, hora, barbeiro, link para reagendar)
+- **Ações contextuais por status:**
+  - Pendente: botão "Confirmar"
+  - Confirmado/Pendente: botão "Concluir" e botão "Cancelar"
+  - Cancelado/Concluído: botão "Remover do Histórico"
+  - Todos têm botão "Fechar"
+- **Fluxo de cancelamento aprimorado:**
+  - Ao clicar em "Cancelar", exibe aviso em destaque com fundo vermelho claro
+  - Botão "Notificar Cliente (WhatsApp)" abre WhatsApp com mensagem de cancelamento pronta
+  - Botão "Confirmar Cancelamento" só deve ser clicado APÓS notificar cliente
+  - Botão "Voltar" para voltar ao modal de detalhes caso mude de ideia
+- **UX melhorias:**
+  - Lista de agendamentos mais limpa e organizada
+  - Redução de clicar botões errados por acidente
+  - Mais contexto antes de tomar decisões importantes
+  - Telefone exibido na lista de agendamentos (mobile-friendly)
+- Sincronizou arquivos com pasta `static/`
+- Commit e push para o GitHub (`aebfcf0`)
+
+**Arquivos modificados:**
+- `admin.html` — Adicionado modal de detalhes do agendamento (`appointment-details-overlay`)
+- `admin.js` — showAppointmentDetails, closeAppointmentDetails, confirmAppointment, cancelAppointmentFromDetails, confirmCancel, deleteAppointment, getWhatsAppLink, getWhatsAppCancelLink; renderAppointmentsList atualizado com onclick no card; completeAppointment refatorada; exports do AdminApp atualizados
+- `admin.css` — Estilos para modal de detalhes (.modal-appointment-details, .appointment-detail-item, .appointment-detail-whatsapp-link, .appointment-detail-cancel-link, .appointment-detail-actions, etc.); cards clicáveis com cursor pointer
+- `static/admin.html` — Sincronizado
+- `static/admin.js` — Sincronizado
+- `static/admin.css` — Sincronizado
+
+**Notas importantes:**
+- O modal de detalhes fornece todas as informações em um só lugar, facilitando decisões
+- O fluxo de cancelamento exige que o admin notifique o cliente antes de confirmar, reduzindo problemas de comunicação
+- Links do WhatsApp são pré-formatados com mensagens personalizadas
+- A lista de agendamentos fica mais limpa sem múltiplos botões em cada card
+- A exclusão de agendamentos do histórico é permanente (DELETE no Supabase)
+
+**Pendências:**
 - Implementar notificacoes WhatsApp (Evolution API ou Z-API)
 - Chatbot WhatsApp para agendamento
 - Relatorios (faturamento, clientes recorrentes)
