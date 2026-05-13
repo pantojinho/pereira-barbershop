@@ -746,10 +746,16 @@ body {
     flex-wrap: wrap;
 }
 
-.manage-card .card-badge {
+.card-badges {
     position: absolute;
     top: 12px;
     right: 12px;
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+
+.manage-card .card-badge {
     padding: 3px 10px;
     border-radius: 20px;
     font-size: 0.7rem;
@@ -768,9 +774,6 @@ body {
 }
 
 .badge-featured {
-    position: absolute;
-    top: 12px;
-    right: 85px;
     background: var(--warning-light);
     color: var(--warning);
     padding: 3px 10px;

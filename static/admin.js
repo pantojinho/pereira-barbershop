@@ -1247,10 +1247,13 @@
             if (hours > 0) duration += hours + 'h';
             if (mins > 0) duration += (hours > 0 ? ' ' : '') + mins + 'min';
 
-            var featuredBadge = s.featured ? '<span class="card-badge badge-featured">&#11088; MAIS PEDIDO</span>' : '';
-            return '<div class="manage-card ' + (s.active ? '' : 'inactive') + '">' +
+            var featuredBadge = s.featured ? '<span class="badge-featured">&#11088; MAIS PEDIDO</span>' : '';
+            var badgesHtml = '<div class="card-badges">' +
                 '<span class="card-badge ' + badgeClass + '">' + badgeText + '</span>' +
                 featuredBadge +
+                '</div>';
+            return '<div class="manage-card ' + (s.active ? '' : 'inactive') + '">' +
+                badgesHtml +
                 '<h4>' + escapeHTML(s.name) + '</h4>' +
                 '<div class="card-price">' + formatCurrency(s.price) + '</div>' +
                 '<div class="card-detail">&#9202; ' + duration + '</div>' +

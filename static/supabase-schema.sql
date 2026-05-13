@@ -1,6 +1,6 @@
 -- ============================================
--- PEREIRA'S BARBER SHOP - Schema Supabase
--- Rodar no SQL Editor do Supabase
+-- PEREIRA'S BARBER SHOP - Schema Completo
+-- Rodar no SQL Editor do Supabase (idempotente)
 -- ============================================
 
 -- 1. TABELA DE BARBEIROS
@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS barbers (
     created_at TIMESTAMPTZ DEFAULT now()
 );
 
--- 2. TABELA DE HORARIOS POR DIA (cada barbeiro pode ter horario diferente por dia)
+-- 2. TABELA DE HORARIOS POR DIA
 CREATE TABLE IF NOT EXISTS barber_schedules (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     barber_id UUID NOT NULL REFERENCES barbers(id) ON DELETE CASCADE,
@@ -68,7 +68,8 @@ CREATE INDEX IF NOT EXISTS idx_appointments_status ON appointments(status);
 CREATE INDEX IF NOT EXISTS idx_barber_schedules_barber ON barber_schedules(barber_id);
 
 -- ============================================
--- ROW LEVEL SECURITY (RLS)
+-- ROW LEVEL SECURITY (basico)
+-- Depois rodar supabase-security-hardening.sql para reforcar
 -- ============================================
 
 ALTER TABLE barbers ENABLE ROW LEVEL SECURITY;
@@ -86,7 +87,7 @@ DROP POLICY IF EXISTS "Authenticated users can manage barbers" ON barbers;
 CREATE POLICY "Authenticated users can manage barbers" ON barbers
     FOR ALL USING (auth.role() = 'authenticated');
 
--- BARBER SCHEDULES (publico le para agendamento)
+-- BARBER SCHEDULES
 DROP POLICY IF EXISTS "Public can read barber schedules" ON barber_schedules;
 CREATE POLICY "Public can read barber schedules" ON barber_schedules
     FOR SELECT USING (true);
@@ -134,7 +135,6 @@ CREATE POLICY "Authenticated users can manage holidays" ON holidays
 -- SEED: DADOS INICIAIS
 -- ============================================
 
--- Barbeiros (so insere se nao existirem)
 INSERT INTO barbers (name, active, sort_order, works_holidays)
 SELECT name, true, sort_order, false FROM (VALUES
     ('Rafael', 1),
@@ -143,8 +143,6 @@ SELECT name, true, sort_order, false FROM (VALUES
 ) AS v(name, sort_order)
 WHERE NOT EXISTS (SELECT 1 FROM barbers WHERE barbers.name = v.name);
 
--- Horarios (Seg=1, Ter=2, Qua=3, Qui=4, Sex=5, Sab=6)
--- So insere se ainda nao houver schedules para o barbeiro
 INSERT INTO barber_schedules (barber_id, day_of_week, start_time, end_time)
 SELECT b.id, d.day, '09:00', '19:00'
 FROM barbers b
@@ -155,7 +153,6 @@ WHERE b.name IN ('Rafael', 'Gabriel', 'Marcus Vinicius')
       WHERE bs.barber_id = b.id AND bs.day_of_week = d.day
   );
 
--- Servicos (so insere se nao existirem)
 INSERT INTO services (name, price, duration_min, active, sort_order, featured)
 SELECT name, price, duration_min, true, sort_order, featured FROM (VALUES
     ('Corte (sobrancelha cortesia)', 43.00, 60, 1, false),
@@ -167,56 +164,7 @@ SELECT name, price, duration_min, true, sort_order, featured FROM (VALUES
 WHERE NOT EXISTS (SELECT 1 FROM services WHERE services.name = v.name);
 
 -- ============================================
--- MIGRATION: Para projetos que ja tinham as tabelas antigas
--- Rode isto no SQL Editor se esta atualizando um projeto existente
--- ============================================
-
--- 1. Adicionar works_holidays na tabela barbers
--- ALTER TABLE barbers ADD COLUMN IF NOT EXISTS works_holidays BOOLEAN NOT NULL DEFAULT false;
-
--- 2. Criar tabela barber_schedules e popular com dados antigos
-/*
-CREATE TABLE IF NOT EXISTS barber_schedules (
-    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-    barber_id UUID NOT NULL REFERENCES barbers(id) ON DELETE CASCADE,
-    day_of_week SMALLINT NOT NULL CHECK (day_of_week BETWEEN 0 AND 6),
-    start_time TIME NOT NULL DEFAULT '09:00',
-    end_time TIME NOT NULL DEFAULT '19:00',
-    UNIQUE(barber_id, day_of_week)
-);
-
-ALTER TABLE barber_schedules ENABLE ROW LEVEL SECURITY;
-
-DROP POLICY IF EXISTS "Public can read barber schedules" ON barber_schedules;
-CREATE POLICY "Public can read barber schedules" ON barber_schedules
-    FOR SELECT USING (true);
-
-DROP POLICY IF EXISTS "Authenticated users can manage barber schedules" ON barber_schedules;
-CREATE POLICY "Authenticated users can manage barber schedules" ON barber_schedules
-    FOR ALL USING (auth.role() = 'authenticated');
-
--- Migrar dados antigos (schedule_start/schedule_end/work_days -> barber_schedules)
-INSERT INTO barber_schedules (barber_id, day_of_week, start_time, end_time)
-SELECT b.id, unnest(b.work_days) AS day, b.schedule_start, b.schedule_end
-FROM barbers b
-WHERE b.work_days IS NOT NULL AND array_length(b.work_days, 1) > 0
-ON CONFLICT (barber_id, day_of_week) DO NOTHING;
-
--- Colunas antigas podem ser removidas depois (opcional)
--- ALTER TABLE barbers DROP COLUMN IF EXISTS schedule_start;
--- ALTER TABLE barbers DROP COLUMN IF EXISTS schedule_end;
--- ALTER TABLE barbers DROP COLUMN IF EXISTS work_days;
-*/
-
--- ============================================
--- MIGRATION: Adicionar photo_url na tabela barbers
--- ============================================
-
--- ALTER TABLE barbers ADD COLUMN IF NOT EXISTS photo_url TEXT;
-
--- ============================================
 -- STORAGE: Bucket para fotos dos barbeiros
--- Rodar no SQL Editor do Supabase
 -- ============================================
 
 INSERT INTO storage.buckets (id, name, public)
