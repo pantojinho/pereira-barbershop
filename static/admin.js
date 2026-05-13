@@ -525,71 +525,71 @@
             '<div class="form-group"><label>Horários por dia da semana</label><div class="schedule-grid">' + scheduleHTML + '</div></div>' +
             '<div class="form-group"><label class="checkbox-label"><input type="checkbox" id="field-works-holidays" ' + holidayChecked + '> Trabalha em feriados</label></div>';
 
-        showModal(title, html, function () {
-            qsa('.day-check').forEach(function (cb) {
-                var day = cb.getAttribute('data-day');
-                var startInput = document.querySelector('.schedule-time-start[data-day="' + day + '"]');
-                var endInput = document.querySelector('.schedule-time-end[data-day="' + day + '"]');
-                startInput.disabled = !cb.checked;
-                endInput.disabled = !cb.checked;
-            });
-        }, async function () {
-            var newName = $('field-name').value.trim();
-            if (!newName) { toast('Nome é obrigatório.', 'error'); return; }
+showModal(title, html, async function () {
+             var newName = $('field-name').value.trim();
+             if (!newName) { toast('Nome é obrigatório.', 'error'); return; }
 
-            var barberData = {
-                name: newName,
-                works_holidays: $('field-works-holidays').checked
-            };
+             var barberData = {
+                 name: newName,
+                 works_holidays: $('field-works-holidays').checked
+             };
 
-            var scheduleEntries = [];
-            qsa('.day-check:checked').forEach(function (cb) {
-                var day = parseInt(cb.getAttribute('data-day'));
-                var st = document.querySelector('.schedule-time-start[data-day="' + day + '"]').value;
-                var en = document.querySelector('.schedule-time-end[data-day="' + day + '"]').value;
-                if (st && en) {
-                    scheduleEntries.push({ day_of_week: day, start_time: st, end_time: en });
-                }
-            });
+             var scheduleEntries = [];
+             qsa('.day-check:checked').forEach(function (cb) {
+                 var day = parseInt(cb.getAttribute('data-day'));
+                 var st = document.querySelector('.schedule-time-start[data-day="' + day + '"]').value;
+                 var en = document.querySelector('.schedule-time-end[data-day="' + day + '"]').value;
+                 if (st && en) {
+                     scheduleEntries.push({ day_of_week: day, start_time: st, end_time: en });
+                 }
+             });
 
-            if (!scheduleEntries.length) {
-                toast('Selecione pelo menos um dia de trabalho.', 'error');
-                return;
-            }
+             if (!scheduleEntries.length) {
+                 toast('Selecione pelo menos um dia de trabalho.', 'error');
+                 return;
+             }
 
-            var result;
-            if (isEdit) {
-                result = await sb.from('barbers').update(barberData).eq('id', barber.id);
-                if (!result.error) {
-                    await sb.from('barber_schedules').delete().eq('barber_id', barber.id);
-                    var insertData = scheduleEntries.map(function (s) {
-                        return { barber_id: barber.id, day_of_week: s.day_of_week, start_time: s.start_time, end_time: s.end_time };
-                    });
-                    await sb.from('barber_schedules').insert(insertData);
-                }
-            } else {
-                var maxResult = await sb.from('barbers').select('sort_order').order('sort_order', { ascending: false }).limit(1);
-                barberData.sort_order = (maxResult.data && maxResult.data.length) ? (maxResult.data[0].sort_order + 1) : 1;
-                barberData.active = true;
-                result = await sb.from('barbers').insert(barberData).select();
-                if (!result.error && result.data && result.data.length) {
-                    var newBarberId = result.data[0].id;
-                    var insertData = scheduleEntries.map(function (s) {
-                        return { barber_id: newBarberId, day_of_week: s.day_of_week, start_time: s.start_time, end_time: s.end_time };
-                    });
-                    await sb.from('barber_schedules').insert(insertData);
-                }
-            }
+             var result;
+             if (isEdit) {
+                 result = await sb.from('barbers').update(barberData).eq('id', barber.id);
+                 if (!result.error) {
+                     await sb.from('barber_schedules').delete().eq('barber_id', barber.id);
+                     var insertData = scheduleEntries.map(function (s) {
+                         return { barber_id: barber.id, day_of_week: s.day_of_week, start_time: s.start_time, end_time: s.end_time };
+                     });
+                     await sb.from('barber_schedules').insert(insertData);
+                 }
+             } else {
+                 var maxResult = await sb.from('barbers').select('sort_order').order('sort_order', { ascending: false }).limit(1);
+                 barberData.sort_order = (maxResult.data && maxResult.data.length) ? (maxResult.data[0].sort_order + 1) : 1;
+                 barberData.active = true;
+                 result = await sb.from('barbers').insert(barberData).select();
+                 if (!result.error && result.data && result.data.length) {
+                     var newBarberId = result.data[0].id;
+                     var insertData = scheduleEntries.map(function (s) {
+                         return { barber_id: newBarberId, day_of_week: s.day_of_week, start_time: s.start_time, end_time: s.end_time };
+                     });
+                     await sb.from('barber_schedules').insert(insertData);
+                 }
+             }
 
-            if (result.error) {
-                toast('Erro: ' + result.error.message, 'error');
-            } else {
-                hideModal();
-                toast(isEdit ? 'Barbeiro atualizado!' : 'Barbeiro adicionado!', 'success');
-                loadBarbers();
-                loadDashboard();
-            }
-        });
+             if (result.error) {
+                 toast('Erro: ' + result.error.message, 'error');
+             } else {
+                 hideModal();
+                 toast(isEdit ? 'Barbeiro atualizado!' : 'Barbeiro adicionado!', 'success');
+                 loadBarbers();
+                 loadDashboard();
+             }
+         }, function () {
+             qsa('.day-check').forEach(function (cb) {
+                 var day = cb.getAttribute('data-day');
+                 var startInput = document.querySelector('.schedule-time-start[data-day="' + day + '"]');
+                 var endInput = document.querySelector('.schedule-time-end[data-day="' + day + '"]');
+                 startInput.disabled = !cb.checked;
+                 endInput.disabled = !cb.checked;
+             });
+         });
     }
 
     async function editBarber(id) {
