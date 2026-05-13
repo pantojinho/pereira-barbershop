@@ -512,9 +512,11 @@
             var en = hasDay ? hasDay.end : defaultEnd;
             scheduleHTML += '<div class="schedule-row">' +
                 '<label class="schedule-day-check"><input type="checkbox" class="day-check" data-day="' + day.num + '" ' + checked + '> ' + day.name + '</label>' +
-                '<input type="time" class="schedule-time-start" data-day="' + day.num + '" value="' + st + '" ' + (hasDay ? '' : 'disabled') + '>' +
-                '<span class="schedule-sep">às</span>' +
-                '<input type="time" class="schedule-time-end" data-day="' + day.num + '" value="' + en + '" ' + (hasDay ? '' : 'disabled') + '>' +
+                '<div class="time-inputs">' +
+                    '<input type="time" class="schedule-time-start" data-day="' + day.num + '" value="' + st + '" ' + (hasDay ? '' : 'disabled') + '>' +
+                    '<span class="schedule-sep">às</span>' +
+                    '<input type="time" class="schedule-time-end" data-day="' + day.num + '" value="' + en + '" ' + (hasDay ? '' : 'disabled') + '>' +
+                '</div>' +
             '</div>';
         });
 
