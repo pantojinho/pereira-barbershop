@@ -1702,6 +1702,10 @@
 
     async function loadAdmins() {
         try {
+            // Carregar barbeiros para o dropdown
+            var barbersResult = await sb.from('barbers').select('id, name').order('sort_order');
+            var barbersList = barbersResult.data || [];
+
             var result = await sb.from('admins').select('*').order('created_at', { ascending: true });
             var admins = result.data || [];
             var container = $('admins-list');
@@ -1710,24 +1714,36 @@
             var currentUserId = session.data.session ? session.data.session.user.id : '';
 
             if (!admins.length) {
-                container.innerHTML = '<p class="empty-state">Nenhum administrador encontrado.</p>';
+                container.innerHTML = '<p class="empty-state">Nenhum usuário encontrado.</p>';
                 return;
             }
 
             var html = '';
             admins.forEach(function (a) {
                 var isMe = a.user_id === currentUserId;
+                var role = a.role || 'admin';
+                var barberName = '';
+                if (role === 'barber' && a.barber_id) {
+                    var found = barbersList.find(function (b) { return b.id === a.barber_id; });
+                    barberName = found ? found.name : '';
+                }
+
+                var roleIcon = role === 'barber' ? 'fa-user-scissors' : 'fa-shield-halved';
+                var roleLabel = role === 'barber' ? 'Barbeiro' + (barberName ? ': ' + escapeHTML(barberName) : '') : 'Administrador';
+                var roleBadgeClass = role === 'barber' ? 'status-barber' : 'status-confirmed';
+
                 html += '<div class="admin-card">' +
                     '<div class="admin-card-info">' +
                         '<div class="admin-avatar">' + escapeHTML(a.email.charAt(0).toUpperCase()) + '</div>' +
                         '<div>' +
                             '<div class="admin-name">' + escapeHTML(a.email) + (isMe ? ' <span style="font-size:0.75rem;color:var(--gold-dim);">(você)</span>' : '') + '</div>' +
-                            '<div class="admin-role">Admin autorizado</div>' +
+                            '<div class="admin-role"><i class="fas ' + roleIcon + '"></i> ' + roleLabel + '</div>' +
                         '</div>' +
                     '</div>' +
                     '<div class="admin-card-actions">' +
-                        '<span class="status-badge status-confirmed">Ativo</span>' +
-                        (isMe ? '' : '<button class="btn-icon success" onclick="AdminApp.resetAdminPassword(\'' + jsString(a.email) + '\')" title="Resetar senha"><i class="fas fa-key"></i></button>' +
+                        '<span class="status-badge ' + roleBadgeClass + '">' + (role === 'barber' ? 'Barbeiro' : 'Admin') + '</span>' +
+                        (isMe ? '' : '<button class="btn-icon" onclick="AdminApp.editAdminRole(\'' + jsString(a.user_id) + '\')" title="Alterar permissão"><i class="fas fa-user-pen"></i></button>' +
+                        '<button class="btn-icon success" onclick="AdminApp.resetAdminPassword(\'' + jsString(a.email) + '\')" title="Resetar senha"><i class="fas fa-key"></i></button>' +
                         '<button class="btn-icon danger" onclick="AdminApp.removeAdmin(\'' + a.user_id + '\', \'' + jsString(a.email) + '\')" title="Remover"><i class="fas fa-trash-alt"></i></button>') +
                     '</div>' +
                 '</div>';
@@ -1735,7 +1751,7 @@
 
             container.innerHTML = html;
         } catch (err) {
-            $('admins-list').innerHTML = '<p class="empty-state">Erro ao carregar administradores.</p>';
+            $('admins-list').innerHTML = '<p class="empty-state">Erro ao carregar usuários.</p>';
         }
     }
 
@@ -1749,15 +1765,52 @@
                 '<label><i class="fas fa-lock"></i> Senha</label>' +
                 '<input type="password" id="admin-new-password" placeholder="Mínimo 6 caracteres" style="font-size:16px" required>' +
             '</div>' +
-            '<p style="font-size:0.8rem;color:var(--gray-600);margin-top:8px;">O novo admin receberá um email de confirmação (se ativado no Supabase). Após confirmar, poderá fazer login.</p>';
+            '<div class="form-group">' +
+                '<label><i class="fas fa-user-tag"></i> Permissão</label>' +
+                '<select id="admin-new-role" style="font-size:16px">' +
+                    '<option value="admin"><i class="fas fa-shield-halved"></i> Administrador (acesso total)</option>' +
+                    '<option value="barber"><i class="fas fa-user-scissors"></i> Barbeiro (só agenda própria)</option>' +
+                '</select>' +
+            '</div>' +
+            '<div class="form-group" id="admin-barber-select-group" style="display:none">' +
+                '<label><i class="fas fa-user-scissors"></i> Barbeiro vinculado</label>' +
+                '<select id="admin-new-barber-id" style="font-size:16px">' +
+                    '<option value="">Selecione o barbeiro...</option>' +
+                '</select>' +
+            '</div>' +
+            '<p style="font-size:0.8rem;color:var(--gray-600);margin-top:8px;">O novo usuário receberá um email de confirmação (se ativado no Supabase).</p>';
 
-        showModal('Novo Administrador', html, function () {
+        showModal('Novo Usuário', html, function () {
             addNewAdmin();
         }, function () {
             var emailInput = $('admin-new-email');
-            var passInput = $('admin-new-password');
             if (emailInput) emailInput.focus();
+
+            // Toggle barber select visibility
+            var roleSelect = $('admin-new-role');
+            var barberGroup = $('admin-barber-select-group');
+            if (roleSelect && barberGroup) {
+                roleSelect.addEventListener('change', function () {
+                    barberGroup.style.display = this.value === 'barber' ? 'block' : 'none';
+                    if (this.value === 'barber') {
+                        loadBarbersForSelect('admin-new-barber-id');
+                    }
+                });
+            }
         });
+    }
+
+    async function loadBarbersForSelect(selectId) {
+        try {
+            var result = await sb.from('barbers').select('id, name').order('sort_order');
+            var barbers = result.data || [];
+            var sel = $(selectId);
+            if (!sel) return;
+            sel.innerHTML = '<option value="">Selecione o barbeiro...</option>';
+            barbers.forEach(function (b) {
+                sel.innerHTML += '<option value="' + b.id + '">' + escapeHTML(b.name) + '</option>';
+            });
+        } catch (err) {}
     }
 
     async function addNewAdmin() {
@@ -1799,7 +1852,9 @@
             var insertResult = await sb.from('admins').insert({
                 user_id: userId,
                 email: email,
-                active: true
+                active: true,
+                role: $('admin-new-role') ? $('admin-new-role').value : 'admin',
+                barber_id: ($('admin-new-barber-id') && $('admin-new-barber-id').value) ? $('admin-new-barber-id').value : null
             });
 
             if (insertResult.error) {
@@ -1808,11 +1863,72 @@
                 return;
             }
 
-            toast('Admin ' + email + ' criado com sucesso!', 'success');
+            toast('Usuário ' + email + ' criado com sucesso!', 'success');
             hideModal();
             loadAdmins();
         } catch (err) {
             toast('Erro: ' + (err.message || 'Tente novamente.'), 'error');
+        }
+    }
+
+    async function editAdminRole(userId) {
+        try {
+            // Buscar dados atuais do admin
+            var adminResult = await sb.from('admins').select('*').eq('user_id', userId).single();
+            if (!adminResult.data) { toast('Usuário não encontrado.', 'error'); return; }
+            var adm = adminResult.data;
+
+            // Carregar barbeiros
+            var barbersResult = await sb.from('barbers').select('id, name').order('sort_order');
+            var barbersList = barbersResult.data || [];
+
+            var barbersOptions = '<option value="">Selecione o barbeiro...</option>';
+            barbersList.forEach(function (b) {
+                barbersOptions += '<option value="' + b.id + '"' + (adm.barber_id === b.id ? ' selected' : '') + '>' + escapeHTML(b.name) + '</option>';
+            });
+
+            var html =
+                '<div class="form-group">' +
+                    '<label><i class="fas fa-user-tag"></i> Permissão</label>' +
+                    '<select id="edit-role" style="font-size:16px">' +
+                        '<option value="admin"' + (adm.role === 'admin' ? ' selected' : '') + '>Administrador (acesso total)</option>' +
+                        '<option value="barber"' + (adm.role === 'barber' ? ' selected' : '') + '>Barbeiro (só agenda própria)</option>' +
+                    '</select>' +
+                '</div>' +
+                '<div class="form-group" id="edit-barber-group" style="display:' + (adm.role === 'barber' ? 'block' : 'none') + '">' +
+                    '<label><i class="fas fa-user-scissors"></i> Barbeiro vinculado</label>' +
+                    '<select id="edit-barber-id" style="font-size:16px">' + barbersOptions + '</select>' +
+                '</div>';
+
+            showModal('Alterar Permissão — ' + adm.email, html, async function () {
+                var newRole = $('edit-role').value;
+                var newBarberId = ($('edit-barber-id') && $('edit-barber-id').value) ? $('edit-barber-id').value : null;
+
+                if (newRole === 'barber' && !newBarberId) {
+                    toast('Selecione o barbeiro vinculado.', 'error');
+                    return;
+                }
+
+                var updateData = { role: newRole, barber_id: newBarberId };
+                var result = await sb.from('admins').update(updateData).eq('user_id', userId);
+                if (result.error) {
+                    toast('Erro: ' + result.error.message, 'error');
+                } else {
+                    hideModal();
+                    toast('Permissão atualizada!', 'success');
+                    loadAdmins();
+                }
+            }, function () {
+                var roleSelect = $('edit-role');
+                var barberGroup = $('edit-barber-group');
+                if (roleSelect && barberGroup) {
+                    roleSelect.addEventListener('change', function () {
+                        barberGroup.style.display = this.value === 'barber' ? 'block' : 'none';
+                    });
+                }
+            });
+        } catch (err) {
+            toast('Erro ao carregar dados do usuário.', 'error');
         }
     }
 
@@ -1947,6 +2063,8 @@
         markOrderPickedUp: markOrderPickedUp,
         cancelOrder: cancelOrder,
         deleteOrder: deleteOrder,
+        resetAdminPassword: resetAdminPassword,
+        editAdminRole: editAdminRole,
         goToPage: function (p) { loadAppointments(p); }
     };
 
