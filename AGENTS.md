@@ -312,6 +312,29 @@ Quando editar HTML/CSS/logo, faca em **AMBOS** os lugares:
 
 ---
 
+### Sessao 6 — 13/05/2026
+**Agente:** opencode (glm-5.1)
+**Tarefas realizadas:**
+- **Pagina de Agendamento — logo e titulo maiores no mobile:**
+  - Logo aumentado de 40px para 52px (breakpoint 768px) e 46px (breakpoint 480px)
+  - Titulo "Agendar Horario" aumentado de 1.1rem para 1.35rem (768px) e de 1rem para 1.2rem (480px)
+- **Painel Admin — abas maiores no mobile:**
+  - Padding das abas aumentado de 12px 14px para 14px 18px (breakpoint 768px)
+  - Font-size das abas aumentado de 0.8rem para 0.9rem (breakpoint 768px)
+- Sincronizou arquivos com pasta `static/`
+
+**Arquivos modificados:**
+- `agendar.css` — Logo e titulo maiores no mobile (768px e 480px)
+- `admin.css` — Abas do nav maiores no mobile (768px)
+
+**Pendencias:**
+- Implementar notificacoes WhatsApp (Evolution API ou Z-API)
+- Chatbot WhatsApp para agendamento
+- Relatorios (faturamento, clientes recorrentes)
+- Sistema de avaliacao
+
+---
+
 ### Plano do Sistema Completo (Roadmap)
 
 #### Fase 1 — Concluida

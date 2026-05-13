@@ -753,6 +753,33 @@ body {
     color: var(--danger);
 }
 
+.badge-featured {
+    position: absolute;
+    top: 12px;
+    right: 85px;
+    background: var(--warning-light);
+    color: var(--warning);
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-weight: 400 !important;
+}
+
+.checkbox-label input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--gold);
+}
+
 /* ========== ADMIN LIST ========== */
 
 .admin-list {
@@ -1064,8 +1091,8 @@ body {
     }
 
     .nav-tab {
-        padding: 12px 14px;
-        font-size: 0.8rem;
+        padding: 14px 18px;
+        font-size: 0.9rem;
     }
 
     .admin-content {

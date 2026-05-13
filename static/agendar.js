@@ -18,6 +18,7 @@
         totalDuration: 0,
         clientName: null,
         clientPhone: null,
+        obs: null
     };
 
     var calendarDate = new Date();
@@ -82,15 +83,16 @@
             var result = await sb.from('services').select('*').eq('active', true).order('sort_order');
             SERVICES_DB = result.data || [];
             var html = '';
-            SERVICES_DB.forEach(function (s, idx) {
+            SERVICES_DB.forEach(function (s) {
                 var hours = Math.floor(s.duration_min / 60);
                 var mins = s.duration_min % 60;
                 var durationStr = '';
                 if (hours > 0) durationStr += hours + 'h';
                 if (mins > 0) durationStr += (hours > 0 ? '' : '') + mins + 'min';
 
-                var featuredClass = (idx === 1) ? ' featured' : '';
-                var tagHtml = (idx === 1) ? '<div class="service-tag">MAIS PEDIDO</div>' : '';
+                var isFeatured = s.featured === true;
+                var featuredClass = isFeatured ? ' featured' : '';
+                var tagHtml = isFeatured ? '<div class="service-tag">MAIS PEDIDO</div>' : '';
 
                 html += '<div class="service-option' + featuredClass + '" data-service="' + s.id + '" data-price="' + s.price + '" data-duration="' + s.duration_min + '">' +
                     tagHtml +
@@ -191,6 +193,7 @@
                 selectedDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
                 booking.date = btn.dataset.date;
                 booking.dateFormatted = formatDate(btn.dataset.date);
+                booking.time = null;
                 renderTimeSlots();
                 updateNavButtons();
             });
@@ -200,7 +203,7 @@
     function formatDate(dateStr) {
         var parts = dateStr.split("-");
         var d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
-        var days = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sab"];
+        var days = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
         var months = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
         return days[d.getDay()] + ", " + d.getDate() + " " + months[d.getMonth()] + " " + d.getFullYear();
     }
@@ -243,8 +246,8 @@
         var endParts = schedule.end.split(":");
         var startMin = parseInt(startParts[0]) * 60 + parseInt(startParts[1]);
         var endMin = parseInt(endParts[0]) * 60 + parseInt(endParts[1]);
-        var duration = booking.totalDuration || 60;
-        var lastSlotMin = endMin - duration;
+        var serviceDuration = booking.totalDuration || 60;
+        var lastSlotMin = endMin - serviceDuration;
 
         var now = new Date();
         var today = new Date();
@@ -255,18 +258,25 @@
 
         var bookedSlots = await getBookedSlots(booking.barberId, booking.date);
 
-        var bookedTimes = {};
+        var bookedRanges = [];
         bookedSlots.forEach(function (appt) {
             var t = appt.appointment_time;
             if (typeof t === 'string') t = t.substring(0, 5);
             var durationMin = Number(appt.total_duration || SLOT_INTERVAL);
             var parts = t.split(':');
             var bookedStart = parseInt(parts[0]) * 60 + parseInt(parts[1]);
-            var bookedEnd = bookedStart + durationMin;
-            for (var busy = bookedStart; busy < bookedEnd; busy += SLOT_INTERVAL) {
-                bookedTimes[String(Math.floor(busy / 60)).padStart(2, '0') + ':' + String(busy % 60).padStart(2, '0')] = true;
-            }
+            bookedRanges.push({ start: bookedStart, end: bookedStart + durationMin });
         });
+
+        function isOverlap(slotStart, slotDuration) {
+            var slotEnd = slotStart + slotDuration;
+            for (var i = 0; i < bookedRanges.length; i++) {
+                if (slotStart < bookedRanges[i].end && slotEnd > bookedRanges[i].start) {
+                    return true;
+                }
+            }
+            return false;
+        }
 
         var html = "";
         for (var m = startMin; m <= lastSlotMin; m += SLOT_INTERVAL) {
@@ -279,10 +289,8 @@
                 var currentMin = now.getHours() * 60 + now.getMinutes();
                 if (m <= currentMin + 30) disabled = true;
             }
-            for (var check = m; check < m + duration; check += SLOT_INTERVAL) {
-                var checkTime = String(Math.floor(check / 60)).padStart(2, '0') + ':' + String(check % 60).padStart(2, '0');
-                if (bookedTimes[checkTime]) disabled = true;
-            }
+
+            if (isOverlap(m, serviceDuration)) disabled = true;
 
             var selClass = booking.time === timeStr ? " selected" : "";
             html += '<button class="time-slot' + selClass + (disabled ? " disabled" : "") + '"' +
@@ -308,10 +316,14 @@
         var options = $$(".service-option");
         options.forEach(function (opt) {
             opt.addEventListener("click", function () {
-                opt.classList.toggle("selected");
+                options.forEach(function (o) { o.classList.remove("selected"); });
+                opt.classList.add("selected");
                 updateServiceSummary();
                 updateNavButtons();
-                if (selectedDate) renderTimeSlots();
+                booking.date = null;
+                booking.dateFormatted = null;
+                booking.time = null;
+                selectedDate = null;
             });
         });
     }
@@ -372,7 +384,7 @@
             line.classList.toggle("active", i < step - 1);
         });
 
-        if (step === 2) {
+        if (step === 3) {
             renderCalendar();
             if (selectedDate) renderTimeSlots();
         }
@@ -394,16 +406,16 @@
             return true;
         }
         if (step === 2) {
-            if (!booking.date || !booking.time) {
-                if (!booking.date) shakeElement($("calendar-days"));
-                else shakeElement($("time-slots"));
+            if (booking.services.length === 0) {
+                shakeElement($("services-list"));
                 return false;
             }
             return true;
         }
         if (step === 3) {
-            if (booking.services.length === 0) {
-                shakeElement($("services-list"));
+            if (!booking.date || !booking.time) {
+                if (!booking.date) shakeElement($("calendar-days"));
+                else shakeElement($("time-slots"));
                 return false;
             }
             return true;
@@ -421,6 +433,7 @@
             }
             booking.clientName = name;
             booking.clientPhone = phone;
+            booking.obs = $("client-obs").value.trim();
             return true;
         }
         return true;
@@ -444,8 +457,8 @@
 
         var canNext = false;
         if (currentStep === 1) canNext = !!booking.barber;
-        else if (currentStep === 2) canNext = !!(booking.date && booking.time);
-        else if (currentStep === 3) canNext = booking.services.length > 0;
+        else if (currentStep === 2) canNext = booking.services.length > 0;
+        else if (currentStep === 3) canNext = !!(booking.date && booking.time);
         else if (currentStep === 4) canNext = true;
 
         $("btn-next").disabled = !canNext;
@@ -457,6 +470,14 @@
         $("sum-time").textContent = booking.time;
         $("sum-services").textContent = booking.services.map(function (s) { return s.name; }).join(", ");
         $("sum-total").textContent = "R$ " + booking.totalPrice.toFixed(2).replace(".", ",");
+
+        var obsContainer = $("sum-obs-container");
+        if (booking.obs) {
+            $("sum-obs").textContent = booking.obs;
+            obsContainer.style.display = "flex";
+        } else {
+            obsContainer.style.display = "none";
+        }
     }
 
     async function createBooking(serviceIds) {
@@ -466,7 +487,8 @@
             p_appointment_date: booking.date,
             p_appointment_time: booking.time + ':00',
             p_client_name: booking.clientName,
-            p_client_phone: booking.clientPhone
+            p_client_phone: booking.clientPhone,
+            p_obs: booking.obs || null
         });
 
         if (!rpcResult.error) return rpcResult;
@@ -484,6 +506,7 @@
             appointment_time: booking.time + ':00',
             client_name: booking.clientName,
             client_phone: booking.clientPhone,
+            obs: booking.obs || null,
             status: 'confirmed',
             total_price: booking.totalPrice,
             total_duration: booking.totalDuration
@@ -522,6 +545,7 @@
             '<div class="summary-item"><i class="fas fa-calendar"></i><span>' + escapeHTML(booking.dateFormatted) + '</span></div>' +
             '<div class="summary-item"><i class="fas fa-clock"></i><span>' + escapeHTML(booking.time) + '</span></div>' +
             '<div class="summary-item"><i class="fas fa-cut"></i><span>' + escapeHTML(booking.services.map(function (s) { return s.name; }).join(", ")) + '</span></div>' +
+            (booking.obs ? '<div class="summary-item"><i class="fas fa-comment"></i><span>' + escapeHTML(booking.obs) + '</span></div>' : '') +
             '<div class="summary-item total"><i class="fas fa-money-bill-wave"></i><span>R$ ' + booking.totalPrice.toFixed(2).replace(".", ",") + '</span></div>';
 
         var msg = "Olá! Acabei de agendar pelo site:\n" +
@@ -530,6 +554,7 @@
             "\nHorário: " + booking.time +
             "\nServiço: " + booking.services.map(function (s) { return s.name; }).join(", ") +
             "\nTotal: R$ " + booking.totalPrice.toFixed(2).replace(".", ",") +
+            (booking.obs ? "\nObs: " + booking.obs : "") +
             "\n\nNome: " + booking.clientName +
             "\nTel: " + booking.clientPhone;
 

@@ -555,8 +555,10 @@
             if (hours > 0) duration += hours + 'h';
             if (mins > 0) duration += (hours > 0 ? ' ' : '') + mins + 'min';
 
+            var featuredBadge = s.featured ? '<span class="card-badge badge-featured">&#11088; MAIS PEDIDO</span>' : '';
             return '<div class="manage-card ' + (s.active ? '' : 'inactive') + '">' +
                 '<span class="card-badge ' + badgeClass + '">' + badgeText + '</span>' +
+                featuredBadge +
                 '<h4>' + escapeHTML(s.name) + '</h4>' +
                 '<div class="card-price">' + formatCurrency(s.price) + '</div>' +
                 '<div class="card-detail">&#9202; ' + duration + '</div>' +
@@ -575,10 +577,13 @@
         var name = isEdit ? service.name : '';
         var price = isEdit ? service.price : '';
         var duration = isEdit ? service.duration_min : 60;
+        var featured = isEdit ? (service.featured || false) : false;
+        var featuredChecked = featured ? 'checked' : '';
 
         var html = '<div class="form-group"><label>Nome</label><input type="text" id="field-name" value="' + escapeHTML(name) + '" required></div>' +
             '<div class="form-group"><label>Preco (R$)</label><input type="number" id="field-price" value="' + price + '" step="0.01" min="0" required></div>' +
-            '<div class="form-group"><label>Duracao (minutos)</label><input type="number" id="field-duration" value="' + duration + '" min="15" step="15" required></div>';
+            '<div class="form-group"><label>Duracao (minutos)</label><input type="number" id="field-duration" value="' + duration + '" min="15" step="15" required></div>' +
+            '<div class="form-group"><label class="checkbox-label"><input type="checkbox" id="field-featured" ' + featuredChecked + '> Marcar como "MAIS PEDIDO"</label></div>';
 
         showModal(title, html, async function () {
             var newName = $('field-name').value.trim();
@@ -590,7 +595,7 @@
                 return;
             }
 
-            var data = { name: newName, price: newPrice, duration_min: newDuration };
+            var data = { name: newName, price: newPrice, duration_min: newDuration, featured: $('field-featured').checked };
 
             var result;
             if (isEdit) {
