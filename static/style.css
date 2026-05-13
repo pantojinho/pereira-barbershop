@@ -1,0 +1,592 @@
+/* Pereira's Barber Shop - Vintage Classic Style */
+/* Color Palette based on original branding */
+
+:root {
+    /* Primary Colors */
+    --green-primary: #2D4B40;        /* Dark forest green */
+    --green-hover: #1a3d32;          /* Darker green for hover states */
+    --green-light: #3a6355;          /* Lighter green for accents */
+
+    /* Backgrounds */
+    --bg-cream: #F8F5ED;             /* Cream/off-white background */
+    --bg-white: #FFFFFF;              /* Pure white for badges */
+    --bg-dark: #0a0a0a;              /* Dark background for contrast */
+
+    /* Text Colors */
+    --text-dark: #1a1a1a;            /* Dark gray for main text */
+    --text-medium: #4a4a4a;          /* Medium gray for secondary text */
+    --text-light: #e8e4d8;           /* Light text on dark backgrounds */
+
+    /* Accent Colors */
+    --gold: #FFD700;                 /* Gold for premium badges */
+    --gold-dim: #B8860B;             /* Dimmed gold */
+
+    /* Spacing */
+    --spacing-xs: 8px;
+    --spacing-sm: 12px;
+    --spacing-md: 16px;
+    --spacing-lg: 24px;
+    --spacing-xl: 32px;
+    --spacing-2xl: 48px;
+
+    /* Border Radius */
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 16px;
+    --radius-xl: 24px;
+
+    /* Shadows */
+    --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.1);
+    --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.15);
+    --shadow-lg: 0 10px 20px rgba(0, 0, 0, 0.2);
+    --shadow-vintage: 0 8px 16px rgba(45, 75, 64, 0.3);
+}
+
+/* Reset & Base Styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: linear-gradient(135deg, #F8F5ED 0%, #EBE5D7 100%);
+    color: var(--text-dark);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: var(--spacing-md);
+    line-height: 1.6;
+}
+
+/* Main Business Card Container */
+.business-card {
+    background-color: var(--bg-cream);
+    border: 8px solid var(--green-primary);
+    border-radius: var(--radius-xl);
+    padding: var(--spacing-2xl);
+    max-width: 1100px;
+    width: 100%;
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-2xl);
+    box-shadow: var(--shadow-vintage);
+    position: relative;
+}
+
+/* Decorative corners */
+.business-card::before {
+    content: '';
+    position: absolute;
+    top: -8px;
+    left: -8px;
+    right: -8px;
+    bottom: -8px;
+    border: 2px solid var(--gold-dim);
+    border-radius: var(--radius-xl);
+    pointer-events: none;
+    z-index: -1;
+}
+
+/* Left Section - Branding */
+.left-section {
+    flex: 1 1 400px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+}
+
+.header-brand {
+    width: 100%;
+    margin-bottom: var(--spacing-lg);
+}
+
+.logo {
+    font-family: 'Playfair Display', serif;
+    font-size: 4.5rem;
+    font-weight: 900;
+    color: var(--green-primary);
+    margin-bottom: var(--spacing-xs);
+    letter-spacing: -2px;
+    text-transform: uppercase;
+    line-height: 1;
+    text-shadow: 2px 2px 0 rgba(45, 75, 64, 0.1);
+}
+
+.shop-name {
+    font-family: 'Inter', sans-serif;
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--green-primary);
+    letter-spacing: 8px;
+    text-transform: uppercase;
+    position: relative;
+    display: inline-block;
+}
+
+.shop-name::before,
+.shop-name::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    width: 20px;
+    height: 1px;
+    background-color: var(--green-primary);
+}
+
+.shop-name::before {
+    left: -25px;
+}
+
+.shop-name::after {
+    right: -25px;
+}
+
+/* Illustration Container */
+.illustration-container {
+    position: relative;
+    margin-bottom: var(--spacing-xl);
+    display: flex;
+    justify-content: center;
+}
+
+.illustration {
+    width: 280px;
+    height: 280px;
+    position: relative;
+    z-index: 1;
+}
+
+.illustration svg {
+    width: 100%;
+    height: 100%;
+    fill: none;
+    stroke: var(--green-primary);
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+/* Since 2016 Badge */
+.since-badge {
+    position: absolute;
+    top: -10px;
+    right: -10px;
+    background-color: var(--green-primary);
+    color: white;
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    transform: rotate(15deg);
+    box-shadow: 0 4px 12px rgba(45, 75, 64, 0.4);
+    z-index: 2;
+}
+
+.since-text {
+    font-size: 0.9rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+}
+
+.since-year {
+    font-size: 1.8rem;
+    font-weight: 900;
+    font-family: 'Playfair Display', serif;
+}
+
+/* Slogan */
+.slogan {
+    font-family: 'Inter', sans-serif;
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: var(--text-medium);
+    margin-bottom: var(--spacing-lg);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    line-height: 1.4;
+}
+
+/* Badges */
+.badges {
+    display: flex;
+    gap: var(--spacing-md);
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.premium-badge,
+.only-one-badge {
+    padding: 12px 24px;
+    border: 2px solid var(--green-primary);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-size: 0.85rem;
+    position: relative;
+}
+
+.premium-badge {
+    background-color: white;
+    color: var(--green-primary);
+    border-radius: 30px;
+    box-shadow: var(--shadow-sm);
+}
+
+.only-one-badge {
+    background-color: var(--gold);
+    color: var(--text-dark);
+    border-color: var(--gold);
+    border-radius: 30px;
+    box-shadow: var(--shadow-md);
+}
+
+/* Right Section - Contact Info */
+.right-section {
+    flex: 1 1 350px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.contact-info {
+    margin-bottom: var(--spacing-xl);
+}
+
+.contact-item {
+    display: flex;
+    align-items: flex-start;
+    margin-bottom: var(--spacing-lg);
+    padding-bottom: var(--spacing-lg);
+    border-bottom: 1px solid rgba(45, 75, 64, 0.15);
+}
+
+.contact-item:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+}
+
+.contact-icon {
+    background-color: var(--green-primary);
+    color: white;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-right: var(--spacing-md);
+    font-size: 1.3rem;
+    flex-shrink: 0;
+    box-shadow: var(--shadow-sm);
+}
+
+.contact-text {
+    flex: 1;
+}
+
+.contact-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-medium);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: var(--spacing-xs);
+}
+
+.contact-value {
+    font-size: 1rem;
+    font-weight: 500;
+    color: var(--text-dark);
+    line-height: 1.5;
+}
+
+/* QR Code Section */
+.qr-section {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-lg);
+    background-color: white;
+    padding: var(--spacing-lg);
+    border: 2px solid rgba(45, 75, 64, 0.2);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-md);
+}
+
+.qr-code {
+    width: 160px;
+    height: 160px;
+    flex-shrink: 0;
+    position: relative;
+    border: 3px solid var(--green-primary);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    background-color: white;
+}
+
+.qr-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: white;
+    color: var(--green-primary);
+    font-size: 3rem;
+}
+
+.scan-instructions {
+    flex: 1;
+}
+
+.scan-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.5rem;
+    font-weight: 900;
+    color: var(--green-primary);
+    margin-bottom: var(--spacing-sm);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.scan-text {
+    font-size: 0.95rem;
+    color: var(--text-medium);
+    line-height: 1.5;
+    margin-bottom: var(--spacing-sm);
+}
+
+.scan-arrow {
+    color: var(--green-primary);
+    font-size: 1.5rem;
+}
+
+/* Footer */
+.footer {
+    margin-top: var(--spacing-xl);
+    text-align: center;
+    color: var(--text-medium);
+    font-size: 0.85rem;
+}
+
+.footer p {
+    opacity: 0.7;
+}
+
+/* Responsive Design */
+
+/* Tablet */
+@media (max-width: 968px) {
+    .business-card {
+        padding: var(--spacing-xl);
+        gap: var(--spacing-xl);
+    }
+
+    .logo {
+        font-size: 3.8rem;
+    }
+
+    .shop-name {
+        font-size: 1.8rem;
+        letter-spacing: 6px;
+    }
+
+    .illustration {
+        width: 240px;
+        height: 240px;
+    }
+
+    .qr-code {
+        width: 140px;
+        height: 140px;
+    }
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+    body {
+        padding: var(--spacing-sm);
+    }
+
+    .business-card {
+        flex-direction: column;
+        padding: var(--spacing-lg);
+        gap: var(--spacing-xl);
+        border-width: 6px;
+    }
+
+    .logo {
+        font-size: 3rem;
+    }
+
+    .shop-name {
+        font-size: 1.6rem;
+        letter-spacing: 4px;
+    }
+
+    .shop-name::before {
+        display: none;
+    }
+
+    .shop-name::after {
+        display: none;
+    }
+
+    .illustration {
+        width: 220px;
+        height: 220px;
+    }
+
+    .since-badge {
+        width: 80px;
+        height: 80px;
+        top: 0;
+        right: 0;
+    }
+
+    .since-text {
+        font-size: 0.75rem;
+    }
+
+    .since-year {
+        font-size: 1.4rem;
+    }
+
+    .slogan {
+        font-size: 1rem;
+        letter-spacing: 1px;
+    }
+
+    .badges {
+        flex-direction: column;
+        width: 100%;
+    }
+
+    .premium-badge,
+    .only-one-badge {
+        width: 100%;
+        text-align: center;
+    }
+
+    .qr-section {
+        flex-direction: column;
+        text-align: center;
+        padding: var(--spacing-md);
+    }
+
+    .qr-code {
+        width: 180px;
+        height: 180px;
+    }
+
+    .contact-icon {
+        width: 45px;
+        height: 45px;
+        font-size: 1.2rem;
+    }
+}
+
+/* Small Mobile */
+@media (max-width: 480px) {
+    .business-card {
+        padding: var(--spacing-md);
+        border-width: 4px;
+        border-radius: var(--radius-lg);
+    }
+
+    .logo {
+        font-size: 2.4rem;
+        letter-spacing: -1px;
+    }
+
+    .shop-name {
+        font-size: 1.3rem;
+        letter-spacing: 3px;
+    }
+
+    .illustration {
+        width: 180px;
+        height: 180px;
+    }
+
+    .qr-code {
+        width: 150px;
+        height: 150px;
+    }
+
+    .scan-title {
+        font-size: 1.2rem;
+    }
+
+    .contact-item {
+        align-items: center;
+        text-align: center;
+    }
+
+    .contact-icon {
+        margin-right: 0;
+        margin-bottom: var(--spacing-xs);
+    }
+
+    .contact-text {
+        width: 100%;
+    }
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.business-card {
+    animation: fadeIn 0.6s ease-out;
+}
+
+/* Hover Effects */
+.contact-item:hover {
+    transform: translateX(5px);
+    transition: transform 0.3s ease;
+}
+
+.premium-badge:hover {
+    transform: scale(1.05);
+    box-shadow: var(--shadow-md);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.only-one-badge:hover {
+    transform: scale(1.05);
+    box-shadow: var(--shadow-lg);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+/* Print Styles */
+@media print {
+    body {
+        background: white;
+    }
+
+    .business-card {
+        box-shadow: none;
+        border-width: 4px;
+    }
+
+    .qr-section {
+        display: none;
+    }
+}
