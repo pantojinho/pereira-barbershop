@@ -34,3 +34,9 @@ Thumbs.db
 
 # Vercel should serve as static site, not Python
 requirements.txt
+
+# Supabase secrets (never commit)
+.env
+.env.local
+.env.production
+supabase-service-key.txt
