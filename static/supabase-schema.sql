@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS barbers (
     active BOOLEAN NOT NULL DEFAULT true,
     sort_order INTEGER NOT NULL DEFAULT 0,
     works_holidays BOOLEAN NOT NULL DEFAULT false,
+    photo_url TEXT,
     created_at TIMESTAMPTZ DEFAULT now()
 );
 
@@ -206,3 +207,34 @@ ON CONFLICT (barber_id, day_of_week) DO NOTHING;
 -- ALTER TABLE barbers DROP COLUMN IF EXISTS schedule_end;
 -- ALTER TABLE barbers DROP COLUMN IF EXISTS work_days;
 */
+
+-- ============================================
+-- MIGRATION: Adicionar photo_url na tabela barbers
+-- ============================================
+
+-- ALTER TABLE barbers ADD COLUMN IF NOT EXISTS photo_url TEXT;
+
+-- ============================================
+-- STORAGE: Bucket para fotos dos barbeiros
+-- Rodar no SQL Editor do Supabase
+-- ============================================
+
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('barber-photos', 'barber-photos', true)
+ON CONFLICT (id) DO NOTHING;
+
+DROP POLICY IF EXISTS "Public can view barber photos" ON storage.objects;
+CREATE POLICY "Public can view barber photos" ON storage.objects
+    FOR SELECT USING (bucket_id = 'barber-photos');
+
+DROP POLICY IF EXISTS "Authenticated can upload barber photos" ON storage.objects;
+CREATE POLICY "Authenticated can upload barber photos" ON storage.objects
+    FOR INSERT WITH CHECK (bucket_id = 'barber-photos' AND auth.role() = 'authenticated');
+
+DROP POLICY IF EXISTS "Authenticated can update barber photos" ON storage.objects;
+CREATE POLICY "Authenticated can update barber photos" ON storage.objects
+    FOR UPDATE USING (bucket_id = 'barber-photos' AND auth.role() = 'authenticated');
+
+DROP POLICY IF EXISTS "Authenticated can delete barber photos" ON storage.objects;
+CREATE POLICY "Authenticated can delete barber photos" ON storage.objects
+    FOR DELETE USING (bucket_id = 'barber-photos' AND auth.role() = 'authenticated');

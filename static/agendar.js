@@ -71,11 +71,16 @@
                 BARBERS[b.id] = {
                     id: b.id,
                     name: b.name,
+                    photo_url: b.photo_url,
                     schedule: daySchedule
                 };
 
+                var barberIconHtml = b.photo_url
+                    ? '<img src="' + escapeHTML(b.photo_url) + '" alt="' + escapeHTML(b.name) + '" class="barber-photo">'
+                    : '<i class="fas fa-cut"></i>';
+
                 html += '<div class="barber-option" data-barber="' + b.id + '">' +
-                    '<div class="barber-icon"><i class="fas fa-cut"></i></div>' +
+                    '<div class="barber-icon">' + barberIconHtml + '</div>' +
                     '<div class="barber-info">' +
                         '<div class="barber-name">' + escapeHTML(b.name) + '</div>' +
                         '<div class="barber-desc">Barbeiro</div>' +

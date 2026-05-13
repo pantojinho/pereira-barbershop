@@ -228,6 +228,13 @@ body {
     justify-content: center;
     font-size: 1.3rem;
     flex-shrink: 0;
+    overflow: hidden;
+}
+
+.barber-photo {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
 }
 
 .barber-info {

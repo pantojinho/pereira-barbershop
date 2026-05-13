@@ -440,6 +440,7 @@
                 footerHTML += '<button onclick="AdminApp.confirmAppointment(\'' + jsString(a.id) + '\')" class="btn-primary">Confirmar</button>';
             }
             if (a.status === 'confirmed' || a.status === 'pending') {
+                footerHTML += '<button onclick="AdminApp.rescheduleAppointment(\'' + jsString(a.id) + '\')" class="btn-outline"><i class="fas fa-calendar-alt"></i> Reagendar</button>';
                 footerHTML += '<button onclick="AdminApp.completeAppointment(\'' + jsString(a.id) + '\')" class="btn-primary">Concluir</button>';
                 footerHTML += '<button onclick="AdminApp.cancelAppointmentFromDetails(\'' + jsString(a.id) + '\')" class="btn-outline btn-danger">Cancelar</button>';
             }
@@ -530,23 +531,336 @@
 
     async function rescheduleAppointment(id) {
         try {
-            var result = await sb.from('appointments').select('*').eq('id', id).single();
+            var result = await sb.from('appointments').select('*, barber:barbers(name)').eq('id', id).single();
             if (!result.data) {
                 toast('Agendamento não encontrado.', 'error');
                 return;
             }
 
-            var a = result.data;
-            var params = new URLSearchParams();
-            if (a.barber_id) params.append('barber', a.barber_id);
-            if (a.service_ids && a.service_ids.length > 0) params.append('service', a.service_ids[0]);
+            _rescheduleState.appointment = result.data;
+            _rescheduleState.calendarDate = new Date();
+            _rescheduleState.selectedDate = null;
+            _rescheduleState.selectedTime = null;
+
+            var schedResult = await sb.from('barber_schedules').select('*').eq('barber_id', result.data.barber_id);
+            _rescheduleState.barberSchedule = {};
+            (schedResult.data || []).forEach(function (s) {
+                _rescheduleState.barberSchedule[s.day_of_week] = {
+                    start: String(s.start_time).substring(0, 5),
+                    end: String(s.end_time).substring(0, 5)
+                };
+            });
+
+            try {
+                var holResult = await sb.from('holidays').select('*');
+                _rescheduleState.holidays = holResult.data || [];
+            } catch (e) {
+                _rescheduleState.holidays = [];
+            }
 
             closeAppointmentDetails();
-            window.location.href = 'agendar.html?' + params.toString();
+            renderRescheduleModal();
+            $('reschedule-overlay').style.display = 'flex';
         } catch (err) {
             console.error(err);
             toast('Erro ao preparar reagendamento.', 'error');
         }
+    }
+
+    function renderRescheduleModal() {
+        var a = _rescheduleState.appointment;
+        var services = (a.service_names || []).join(', ');
+        var barberName = a.barber ? a.barber.name : 'Barbeiro';
+
+        var html = '<div class="reschedule-current-info">' +
+            '<div class="reschedule-label">Agendamento atual</div>' +
+            '<div class="reschedule-detail"><strong>' + escapeHTML(a.client_name) + '</strong> — ' + escapeHTML(barberName) + '</div>' +
+            '<div class="reschedule-detail">' + escapeHTML(services) + '</div>' +
+            '<div class="reschedule-detail">' + formatDate(a.appointment_date) + ' às ' + formatTime(a.appointment_time) + '</div>' +
+        '</div>' +
+        '<div class="reschedule-arrow"><i class="fas fa-arrow-down"></i> Escolha a nova data e horário</div>' +
+        '<div class="reschedule-calendar">' +
+            '<div class="reschedule-calendar-header">' +
+                '<button type="button" id="reschedule-prev-month" class="btn-outline btn-sm"><i class="fas fa-chevron-left"></i></button>' +
+                '<span id="reschedule-month-year"></span>' +
+                '<button type="button" id="reschedule-next-month" class="btn-outline btn-sm"><i class="fas fa-chevron-right"></i></button>' +
+            '</div>' +
+            '<div class="reschedule-calendar-weekdays">' +
+                '<span>Dom</span><span>Seg</span><span>Ter</span><span>Qua</span><span>Qui</span><span>Sex</span><span>Sáb</span>' +
+            '</div>' +
+            '<div id="reschedule-calendar-days" class="reschedule-calendar-days"></div>' +
+        '</div>' +
+        '<div id="reschedule-time-section" class="reschedule-time-section" style="display:none">' +
+            '<div class="reschedule-label">Horários disponíveis</div>' +
+            '<div id="reschedule-time-slots" class="reschedule-time-slots"></div>' +
+        '</div>';
+
+        $('reschedule-body').innerHTML = html;
+        $('reschedule-footer').innerHTML = '<button onclick="AdminApp.confirmReschedule()" class="btn-primary" id="btn-confirm-reschedule" disabled><i class="fas fa-calendar-check"></i> Confirmar Reagendamento</button>' +
+            '<button onclick="AdminApp.closeReschedule()" class="btn-outline">Cancelar</button>';
+
+        renderRescheduleCalendar();
+
+        $('reschedule-prev-month').addEventListener('click', function () {
+            _rescheduleState.calendarDate.setMonth(_rescheduleState.calendarDate.getMonth() - 1);
+            renderRescheduleCalendar();
+        });
+        $('reschedule-next-month').addEventListener('click', function () {
+            _rescheduleState.calendarDate.setMonth(_rescheduleState.calendarDate.getMonth() + 1);
+            renderRescheduleCalendar();
+        });
+    }
+
+    function renderRescheduleCalendar() {
+        var year = _rescheduleState.calendarDate.getFullYear();
+        var month = _rescheduleState.calendarDate.getMonth();
+        var months = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+
+        $('reschedule-month-year').textContent = months[month] + ' ' + year;
+
+        var firstDay = new Date(year, month, 1).getDay();
+        var daysInMonth = new Date(year, month + 1, 0).getDate();
+        var today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        var html = '';
+        for (var i = 0; i < firstDay; i++) {
+            html += '<button class="reschedule-day empty" disabled></button>';
+        }
+
+        for (var d = 1; d <= daysInMonth; d++) {
+            var date = new Date(year, month, d);
+            date.setHours(0, 0, 0, 0);
+            var dayOfWeek = date.getDay();
+            var isPast = date < today;
+            var isToday = date.getTime() === today.getTime();
+            var dateStr = year + '-' + String(month + 1).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+            var barberWorks = !!_rescheduleState.barberSchedule[dayOfWeek];
+            var isHol = _rescheduleState.holidays.some(function (h) {
+                if (h.recurring) {
+                    var holDate = new Date(h.date + 'T00:00:00');
+                    return holDate.getMonth() === month && holDate.getDate() === d;
+                }
+                return h.date === dateStr;
+            });
+            var disabled = isPast || !barberWorks || isHol;
+            var selClass = _rescheduleState.selectedDate === dateStr ? ' selected' : '';
+            var todayClass = isToday ? ' today' : '';
+
+            html += '<button class="reschedule-day' + selClass + todayClass + (disabled ? ' disabled' : '') + '"' +
+                (disabled ? ' disabled' : '') +
+                ' data-date="' + dateStr + '">' + d + '</button>';
+        }
+
+        $('reschedule-calendar-days').innerHTML = html;
+
+        qsa('.reschedule-day:not(.disabled):not(.empty)').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                qsa('.reschedule-day').forEach(function (b) { b.classList.remove('selected'); });
+                btn.classList.add('selected');
+                _rescheduleState.selectedDate = btn.getAttribute('data-date');
+                _rescheduleState.selectedTime = null;
+                $('btn-confirm-reschedule').disabled = true;
+                renderRescheduleTimeSlots();
+            });
+        });
+    }
+
+    async function renderRescheduleTimeSlots() {
+        if (!_rescheduleState.selectedDate) {
+            $('reschedule-time-section').style.display = 'none';
+            return;
+        }
+
+        $('reschedule-time-section').style.display = 'block';
+
+        var dayOfWeek = new Date(_rescheduleState.selectedDate + 'T00:00:00').getDay();
+        var daySchedule = _rescheduleState.barberSchedule[dayOfWeek];
+
+        if (!daySchedule) {
+            $('reschedule-time-slots').innerHTML = '<p class="empty-state">Este barbeiro não trabalha neste dia.</p>';
+            return;
+        }
+
+        var SLOT_INTERVAL = 30;
+        var startParts = daySchedule.start.split(':');
+        var endParts = daySchedule.end.split(':');
+        var startMin = parseInt(startParts[0]) * 60 + parseInt(startParts[1]);
+        var endMin = parseInt(endParts[0]) * 60 + parseInt(endParts[1]);
+        var serviceDuration = _rescheduleState.appointment.total_duration || 60;
+        var lastSlotMin = endMin - serviceDuration;
+
+        var now = new Date();
+        var today = new Date();
+        today.setHours(0, 0, 0, 0);
+        var isToday = _rescheduleState.selectedDate === todayStr();
+
+        var bookedSlots = await getBookedSlotsForReschedule(_rescheduleState.appointment.barber_id, _rescheduleState.selectedDate);
+
+        var bookedRanges = [];
+        bookedSlots.forEach(function (appt) {
+            var t = appt.appointment_time;
+            if (typeof t === 'string') t = t.substring(0, 5);
+            var durationMin = Number(appt.total_duration || SLOT_INTERVAL);
+            var parts = t.split(':');
+            var bookedStart = parseInt(parts[0]) * 60 + parseInt(parts[1]);
+            bookedRanges.push({ start: bookedStart, end: bookedStart + durationMin });
+        });
+
+        function isOverlap(slotStart, slotDuration) {
+            var slotEnd = slotStart + slotDuration;
+            for (var i = 0; i < bookedRanges.length; i++) {
+                if (slotStart < bookedRanges[i].end && slotEnd > bookedRanges[i].start) return true;
+            }
+            return false;
+        }
+
+        var html = '';
+        for (var m = startMin; m <= lastSlotMin; m += SLOT_INTERVAL) {
+            var h = Math.floor(m / 60);
+            var min = m % 60;
+            var timeStr = String(h).padStart(2, '0') + ':' + String(min).padStart(2, '0');
+
+            var disabled = false;
+            if (isToday) {
+                var currentMin = now.getHours() * 60 + now.getMinutes();
+                if (m <= currentMin + 30) disabled = true;
+            }
+
+            if (isOverlap(m, serviceDuration)) disabled = true;
+
+            var selClass = _rescheduleState.selectedTime === timeStr ? ' selected' : '';
+            html += '<button class="reschedule-slot' + selClass + (disabled ? ' disabled' : '') + '"' +
+                (disabled ? ' disabled' : '') +
+                ' data-time="' + timeStr + '">' + timeStr + '</button>';
+        }
+
+        if (!html) html = '<p class="empty-state">Nenhum horário disponível nesta data.</p>';
+
+        $('reschedule-time-slots').innerHTML = html;
+
+        qsa('.reschedule-slot:not(.disabled)').forEach(function (slot) {
+            slot.addEventListener('click', function () {
+                qsa('.reschedule-slot').forEach(function (s) { s.classList.remove('selected'); });
+                slot.classList.add('selected');
+                _rescheduleState.selectedTime = slot.getAttribute('data-time');
+                $('btn-confirm-reschedule').disabled = false;
+            });
+        });
+
+        setTimeout(function () {
+            var section = $('reschedule-time-section');
+            if (section) section.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }, 100);
+    }
+
+    async function getBookedSlotsForReschedule(barberId, date) {
+        try {
+            var rpcResult = await sb.rpc('get_public_booked_slots', {
+                p_barber_id: barberId,
+                p_appointment_date: date
+            });
+            if (!rpcResult.error) return rpcResult.data || [];
+        } catch (e) {}
+
+        try {
+            var result = await sb.from('appointments')
+                .select('appointment_time, total_duration')
+                .eq('barber_id', barberId)
+                .eq('appointment_date', date)
+                .neq('status', 'cancelled');
+            return result.data || [];
+        } catch (e) {
+            return [];
+        }
+    }
+
+    async function confirmReschedule() {
+        if (!_rescheduleState.selectedDate || !_rescheduleState.selectedTime) {
+            toast('Selecione a nova data e horário.', 'error');
+            return;
+        }
+
+        var btn = $('btn-confirm-reschedule');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Reagendando...';
+
+        try {
+            var a = _rescheduleState.appointment;
+            var oldDate = a.appointment_date;
+            var oldTime = a.appointment_time;
+
+            var result = await sb.from('appointments').update({
+                appointment_date: _rescheduleState.selectedDate,
+                appointment_time: _rescheduleState.selectedTime + ':00',
+                status: 'confirmed'
+            }).eq('id', a.id);
+
+            if (result.error) {
+                toast('Erro: ' + result.error.message, 'error');
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-calendar-check"></i> Confirmar Reagendamento';
+                return;
+            }
+
+            var whatsappLink = getWhatsAppRescheduleLink(a);
+
+            $('reschedule-body').innerHTML = '<div class="reschedule-success">' +
+                '<div class="reschedule-success-icon"><i class="fas fa-check-circle"></i></div>' +
+                '<h3 class="reschedule-success-title">Reagendado com sucesso!</h3>' +
+                '<div class="reschedule-detail" style="text-align:center;">' +
+                    '<strong>' + escapeHTML(a.client_name) + '</strong>' +
+                '</div>' +
+                '<div class="reschedule-change">' +
+                    '<div class="reschedule-change-old"><span>Antes</span><strong>' + formatDate(oldDate) + '</strong><strong>' + formatTime(oldTime) + '</strong></div>' +
+                    '<div class="reschedule-change-arrow"><i class="fas fa-arrow-right"></i></div>' +
+                    '<div class="reschedule-change-new"><span>Agora</span><strong>' + formatDate(_rescheduleState.selectedDate) + '</strong><strong>' + _rescheduleState.selectedTime + '</strong></div>' +
+                '</div>' +
+                '<a href="' + whatsappLink + '" class="appointment-detail-whatsapp-link" target="_blank" style="justify-content:center;margin-top:16px;">' +
+                    '<i class="fab fa-whatsapp"></i> Notificar Cliente (WhatsApp)' +
+                '</a>' +
+            '</div>';
+
+            $('reschedule-footer').innerHTML = '<button onclick="AdminApp.closeReschedule()" class="btn-primary">Fechar</button>';
+
+            toast('Agendamento reagendado!', 'success');
+            loadDashboard();
+            loadAppointments(currentPage);
+        } catch (err) {
+            console.error(err);
+            toast('Erro ao reagendar.', 'error');
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-calendar-check"></i> Confirmar Reagendamento';
+        }
+    }
+
+    function getWhatsAppRescheduleLink(appointment) {
+        var clean = appointment.client_phone.replace(/\D/g, '');
+        if (!clean.startsWith('55')) clean = '55' + clean;
+        var oldDate = formatDate(appointment.appointment_date);
+        var oldTime = formatTime(appointment.appointment_time);
+        var newDate = formatDate(_rescheduleState.selectedDate);
+        var newTime = _rescheduleState.selectedTime;
+        var text = 'Olá, ' + appointment.client_name + '! 😊\n\n' +
+            'Seu agendamento foi reagendado:\n' +
+            '✂️ ' + (appointment.service_names || []).join(', ') + '\n' +
+            '👤 ' + (appointment.barber ? appointment.barber.name : 'Barbeiro') + '\n\n' +
+            '❌ Antes: ' + oldDate + ' às ' + oldTime + '\n' +
+            '✅ Agora: ' + newDate + ' às ' + newTime + '\n\n' +
+            'Agradecemos a compreensão! ✂️';
+        return 'https://wa.me/' + clean + '?text=' + encodeURIComponent(text);
+    }
+
+    function closeReschedule() {
+        $('reschedule-overlay').style.display = 'none';
+        _rescheduleState = {
+            appointment: null,
+            calendarDate: new Date(),
+            selectedDate: null,
+            selectedTime: null,
+            barberSchedule: {},
+            holidays: []
+        };
     }
 
     async function confirmCancel(id) {
@@ -588,6 +902,15 @@
     // ========== BARBERS CRUD ==========
 
     var _barberSchedules = {};
+
+    var _rescheduleState = {
+        appointment: null,
+        calendarDate: new Date(),
+        selectedDate: null,
+        selectedTime: null,
+        barberSchedule: {},
+        holidays: []
+    };
 
     async function loadBarbers() {
         try {
@@ -660,9 +983,13 @@
             var badgeText = b.active ? 'Ativo' : 'Inativo';
             var scheduleStr = getBarberScheduleSummary(b.id);
             var holidayBadge = '';
+            var photoHtml = b.photo_url
+                ? '<div class="card-barber-photo"><img src="' + escapeHTML(b.photo_url) + '" alt="' + escapeHTML(b.name) + '"></div>'
+                : '<div class="card-barber-photo card-barber-photo-placeholder"><i class="fas fa-user"></i></div>';
             return '<div class="manage-card ' + (b.active ? '' : 'inactive') + '">' +
                 '<span class="card-badge ' + badgeClass + '">' + badgeText + '</span>' +
                 holidayBadge +
+                photoHtml +
                 '<h4>' + escapeHTML(b.name) + '</h4>' +
                 '<div class="card-detail">&#128336; ' + scheduleStr + '</div>' +
                 '<div class="card-actions">' +
@@ -713,15 +1040,32 @@
         });
 
         var html = '<div class="form-group"><label>Nome</label><input type="text" id="field-name" value="' + escapeHTML(name) + '" required></div>' +
-            '<div class="form-group"><label>Horários por dia da semana</label><div class="schedule-grid">' + scheduleHTML + '</div></div>';
+            '<div class="form-group"><label><i class="fas fa-camera"></i> Foto do Perfil</label>' +
+                '<div class="barber-photo-upload-area">' +
+                    '<div class="barber-photo-preview" id="barber-photo-preview"><i class="fas fa-user-circle"></i></div>' +
+                    '<input type="file" id="field-photo" accept="image/*" style="display:none">' +
+                    '<input type="hidden" id="field-photo-remove" value="false">' +
+                    '<div class="barber-photo-actions">' +
+                        '<button type="button" class="btn-outline btn-sm" id="btn-choose-photo"><i class="fas fa-camera"></i> Escolher Foto</button>' +
+                        '<button type="button" class="btn-outline btn-sm btn-danger" id="btn-remove-photo" style="display:none"><i class="fas fa-trash"></i> Remover</button>' +
+                    '</div>' +
+                    '<div class="barber-photo-hint">JPG ou PNG, maximo 2MB</div>' +
+                '</div>' +
+            '</div>' +
+            '<div class="form-group"><label>Horarios por dia da semana</label><div class="schedule-grid">' + scheduleHTML + '</div></div>';
 
-showModal(title, html, async function () {
+        showModal(title, html, async function () {
              var newName = $('field-name').value.trim();
-             if (!newName) { toast('Nome é obrigatório.', 'error'); return; }
+             if (!newName) { toast('Nome e obrigatorio.', 'error'); return; }
 
              var barberData = {
                   name: newName
               };
+
+             var photoFile = $('field-photo') && $('field-photo').files && $('field-photo').files[0] ? $('field-photo').files[0] : null;
+             var shouldRemovePhoto = $('field-photo-remove') && $('field-photo-remove').value === 'true';
+
+             if (shouldRemovePhoto) barberData.photo_url = null;
 
              var scheduleEntries = [];
              qsa('.day-check:checked').forEach(function (cb) {
@@ -739,6 +1083,8 @@ showModal(title, html, async function () {
              }
 
              var result;
+             var savedBarberId = isEdit ? barber.id : null;
+
              if (isEdit) {
                  result = await sb.from('barbers').update(barberData).eq('id', barber.id);
                  if (!result.error) {
@@ -754,12 +1100,30 @@ showModal(title, html, async function () {
                  barberData.active = true;
                  result = await sb.from('barbers').insert(barberData).select();
                  if (!result.error && result.data && result.data.length) {
-                     var newBarberId = result.data[0].id;
+                     savedBarberId = result.data[0].id;
                      var insertData = scheduleEntries.map(function (s) {
-                         return { barber_id: newBarberId, day_of_week: s.day_of_week, start_time: s.start_time, end_time: s.end_time };
+                         return { barber_id: savedBarberId, day_of_week: s.day_of_week, start_time: s.start_time, end_time: s.end_time };
                      });
                      await sb.from('barber_schedules').insert(insertData);
                  }
+             }
+
+             if (!result.error && photoFile && savedBarberId) {
+                 var photoPath = savedBarberId + '/photo';
+                 var uploadResult = await sb.storage.from('barber-photos').upload(photoPath, photoFile, { upsert: true });
+                 if (!uploadResult.error) {
+                     var urlData = sb.storage.from('barber-photos').getPublicUrl(photoPath);
+                     await sb.from('barbers').update({ photo_url: urlData.data.publicUrl }).eq('id', savedBarberId);
+                 } else {
+                     console.warn('Photo upload failed:', uploadResult.error.message);
+                 }
+             }
+
+             if (shouldRemovePhoto && isEdit && barber.photo_url) {
+                 try {
+                     var oldPath = barber.id + '/photo';
+                     await sb.storage.from('barber-photos').remove([oldPath]);
+                 } catch (e) {}
              }
 
              if (result.error) {
@@ -783,6 +1147,44 @@ showModal(title, html, async function () {
               toggleDayInputs();
               qsa('.day-check').forEach(function (cb) {
                   cb.addEventListener('change', toggleDayInputs);
+              });
+
+              var photoPreview = $('barber-photo-preview');
+              var photoInput = $('field-photo');
+              var btnChoosePhoto = $('btn-choose-photo');
+              var btnRemovePhoto = $('btn-remove-photo');
+
+              if (isEdit && barber && barber.photo_url) {
+                  photoPreview.innerHTML = '<img src="' + escapeHTML(barber.photo_url) + '" alt="Foto">';
+                  btnRemovePhoto.style.display = 'inline-flex';
+              }
+
+              btnChoosePhoto.addEventListener('click', function () { photoInput.click(); });
+
+              photoInput.addEventListener('change', function () {
+                  var file = this.files[0];
+                  if (!file) return;
+                  if (file.size > 2 * 1024 * 1024) {
+                      toast('Foto muito grande. Use imagens ate 2MB.', 'error');
+                      this.value = '';
+                      return;
+                  }
+                  var reader = new FileReader();
+                  reader.onload = function (e) {
+                      photoPreview.innerHTML = '<img src="' + e.target.result + '" alt="Preview">';
+                  };
+                  reader.readAsDataURL(file);
+                  btnRemovePhoto.style.display = 'inline-flex';
+                  $('field-photo-remove').value = 'false';
+              });
+
+              btnRemovePhoto.addEventListener('click', function () {
+                  photoPreview.innerHTML = '<i class="fas fa-user-circle"></i>';
+                  photoInput.value = '';
+                  if (isEdit && barber && barber.photo_url) {
+                      $('field-photo-remove').value = 'true';
+                  }
+                  btnRemovePhoto.style.display = 'none';
               });
           });
     }
@@ -1129,6 +1531,11 @@ showModal(title, html, async function () {
             if (e.target === this) closeAppointmentDetails();
         });
 
+        $('reschedule-close').addEventListener('click', closeReschedule);
+        $('reschedule-overlay').addEventListener('click', function (e) {
+            if (e.target === this) closeReschedule();
+        });
+
         $('btn-add-barber').addEventListener('click', function () { showBarberForm(null); });
         $('btn-add-service').addEventListener('click', function () { showServiceForm(null); });
         $('btn-add-admin').addEventListener('click', showAddAdminForm);
@@ -1153,6 +1560,8 @@ showModal(title, html, async function () {
         confirmAppointment: confirmAppointment,
         cancelAppointmentFromDetails: cancelAppointmentFromDetails,
         rescheduleAppointment: rescheduleAppointment,
+        confirmReschedule: confirmReschedule,
+        closeReschedule: closeReschedule,
         confirmCancel: confirmCancel,
         deleteAppointment: deleteAppointment,
         completeAppointment: completeAppointment,

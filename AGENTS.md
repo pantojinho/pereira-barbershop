@@ -888,6 +888,88 @@ ON CONFLICT (barber_id, day_of_week) DO NOTHING;
 
 ---
 
+### Sessão 23 — 13/05/2026
+**Agente:** opencode (glm-5.1)
+**Tarefas realizadas:**
+- **Foto de perfil do barbeiro:**
+  - Novo campo `photo_url TEXT` na tabela `barbers` do Supabase
+  - Criado bucket `barber-photos` no Supabase Storage (público)
+  - Policies do Storage: público lê, autenticados fazem upload/update/delete
+- **Admin — upload de foto no formulário do barbeiro:**
+  - Preview circular (100px) no formulário de criar/editar barbeiro
+  - Botão "Escolher Foto" abre seletor de arquivo (accept: image/*)
+  - Validação de tamanho: máximo 2MB
+  - Preview atualiza em tempo real com FileReader
+  - Botão "Remover" para apagar a foto
+  - Upload para Supabase Storage com `upsert: true` (sobrescreve foto anterior)
+  - URL pública salva em `photo_url` na tabela barbers
+  - Ao remover foto, deleta do Storage e limpa `photo_url`
+  - Fluxo para novo barbeiro: cria → pega ID → faz upload → atualiza photo_url
+- **Admin — cards dos barbeiros com foto:**
+  - Foto circular (72px) exibida no topo do card do barbeiro
+  - Placeholder com ícone de usuário se não tiver foto
+  - Borda verde na foto
+- **Página de agendamento — foto redonda ao lado do nome:**
+  - Foto carregada do banco (photo_url) junto com os dados do barbeiro
+  - Foto redonda (56px) substitui o ícone de tesoura quando existe
+  - Fallback para ícone `fa-cut` quando não tem foto
+  - Photo com `object-fit: cover` para preenchimento perfeito
+- Sincronizou todos os arquivos com pasta `static/`
+
+**Arquivos modificados:**
+- `supabase-schema.sql` — `photo_url TEXT` na tabela barbers + bucket barber-photos + policies Storage
+- `admin.js` — showBarberForm com upload de foto, preview, salvar/remover; renderBarbers com foto nos cards
+- `admin.css` — .card-barber-photo, .barber-photo-upload-area, .barber-photo-preview, .barber-photo-actions, .barber-photo-hint
+- `agendar.js` — BARBERS inclui photo_url; barber-option mostra foto redonda ou ícone
+- `agendar.css` — .barber-photo (object-fit cover), .barber-icon com overflow hidden
+- Todos sincronizados em `static/`
+
+**SQL para rodar no Supabase SQL Editor:**
+```sql
+-- 1. Adicionar coluna photo_url
+ALTER TABLE barbers ADD COLUMN IF NOT EXISTS photo_url TEXT;
+
+-- 2. Criar bucket de fotos
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('barber-photos', 'barber-photos', true)
+ON CONFLICT (id) DO NOTHING;
+
+-- 3. Policies do Storage
+DROP POLICY IF EXISTS "Public can view barber photos" ON storage.objects;
+CREATE POLICY "Public can view barber photos" ON storage.objects
+    FOR SELECT USING (bucket_id = 'barber-photos');
+
+DROP POLICY IF EXISTS "Authenticated can upload barber photos" ON storage.objects;
+CREATE POLICY "Authenticated can upload barber photos" ON storage.objects
+    FOR INSERT WITH CHECK (bucket_id = 'barber-photos' AND auth.role() = 'authenticated');
+
+DROP POLICY IF EXISTS "Authenticated can update barber photos" ON storage.objects;
+CREATE POLICY "Authenticated can update barber photos" ON storage.objects
+    FOR UPDATE USING (bucket_id = 'barber-photos' AND auth.role() = 'authenticated');
+
+DROP POLICY IF EXISTS "Authenticated can delete barber photos" ON storage.objects;
+CREATE POLICY "Authenticated can delete barber photos" ON storage.objects
+    FOR DELETE USING (bucket_id = 'barber-photos' AND auth.role() = 'authenticated');
+```
+
+**Arquitetura atualizada:**
+```
+barbers (id, name, active, sort_order, works_holidays, photo_url)
+  └── barber_schedules (id, barber_id, day_of_week, start_time, end_time)
+
+Supabase Storage:
+  └── barber-photos/ (bucket público)
+       └── {barber_id}/photo  ← foto de perfil
+```
+
+**Pendências:**
+- Implementar notificacoes WhatsApp (Evolution API ou Z-API)
+- Chatbot WhatsApp para agendamento
+- Relatorios (faturamento, clientes recorrentes)
+- Sistema de avaliacao
+
+---
+
 ### Plano do Sistema Completo (Roadmap)
 
 #### Fase 1 — Concluida
