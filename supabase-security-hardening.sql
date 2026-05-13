@@ -49,12 +49,15 @@ ALTER TABLE public.appointments ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Public can read active barbers" ON public.barbers;
 DROP POLICY IF EXISTS "Authenticated users can manage barbers" ON public.barbers;
+DROP POLICY IF EXISTS "Admins can manage barbers" ON public.barbers;
 DROP POLICY IF EXISTS "Public can read active services" ON public.services;
 DROP POLICY IF EXISTS "Authenticated users can manage services" ON public.services;
+DROP POLICY IF EXISTS "Admins can manage services" ON public.services;
 DROP POLICY IF EXISTS "Public can create appointments" ON public.appointments;
 DROP POLICY IF EXISTS "Public can read appointments" ON public.appointments;
 DROP POLICY IF EXISTS "Authenticated users can manage appointments" ON public.appointments;
 DROP POLICY IF EXISTS "Authenticated users can delete appointments" ON public.appointments;
+DROP POLICY IF EXISTS "Admins can manage appointments" ON public.appointments;
 
 CREATE POLICY "Public can read active barbers" ON public.barbers
     FOR SELECT TO anon, authenticated
