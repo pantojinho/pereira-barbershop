@@ -1,6 +1,6 @@
 -- ============================================
 -- PEREIRA'S BARBER SHOP - Security hardening
--- Run this in the Supabase SQL Editor before deploying the updated JS.
+-- Run this in Supabase SQL Editor before deploying to new structure.
 -- ============================================
 
 -- 1. Explicit admin allow-list.
@@ -44,12 +44,16 @@ CREATE POLICY "Admins can read admins" ON public.admins
 
 -- 2. Replace broad "any authenticated user is admin" policies.
 ALTER TABLE public.barbers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.barber_schedules ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.services ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.appointments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.holidays ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Public can read active barbers" ON public.barbers;
 DROP POLICY IF EXISTS "Authenticated users can manage barbers" ON public.barbers;
 DROP POLICY IF EXISTS "Admins can manage barbers" ON public.barbers;
+DROP POLICY IF EXISTS "Public can read barber schedules" ON public.barber_schedules;
+DROP POLICY IF EXISTS "Authenticated users can manage barber schedules" ON public.barber_schedules;
 DROP POLICY IF EXISTS "Public can read active services" ON public.services;
 DROP POLICY IF EXISTS "Authenticated users can manage services" ON public.services;
 DROP POLICY IF EXISTS "Admins can manage services" ON public.services;
@@ -57,8 +61,10 @@ DROP POLICY IF EXISTS "Public can create appointments" ON public.appointments;
 DROP POLICY IF EXISTS "Public can read appointments" ON public.appointments;
 DROP POLICY IF EXISTS "Authenticated users can manage appointments" ON public.appointments;
 DROP POLICY IF EXISTS "Authenticated users can delete appointments" ON public.appointments;
-DROP POLICY IF EXISTS "Admins can manage appointments" ON public.appointments;
+DROP POLICY IF EXISTS "Public can read holidays" ON public.holidays;
+DROP POLICY IF EXISTS "Authenticated users can manage holidays" ON public.holidays;
 
+-- BARBEIROS
 CREATE POLICY "Public can read active barbers" ON public.barbers
     FOR SELECT TO anon, authenticated
     USING (active = true OR public.is_current_admin());
@@ -68,6 +74,17 @@ CREATE POLICY "Admins can manage barbers" ON public.barbers
     USING (public.is_current_admin())
     WITH CHECK (public.is_current_admin());
 
+-- BARBER SCHEDULES
+CREATE POLICY "Public can read barber schedules" ON public.barber_schedules
+    FOR SELECT TO anon, authenticated
+    USING (true);
+
+CREATE POLICY "Admins can manage barber schedules" ON public.barber_schedules
+    FOR ALL TO authenticated
+    USING (public.is_current_admin())
+    WITH CHECK (public.is_current_admin());
+
+-- SERVICOS
 CREATE POLICY "Public can read active services" ON public.services
     FOR SELECT TO anon, authenticated
     USING (active = true OR public.is_current_admin());
@@ -77,7 +94,26 @@ CREATE POLICY "Admins can manage services" ON public.services
     USING (public.is_current_admin())
     WITH CHECK (public.is_current_admin());
 
+-- AGENDAMENTOS
+CREATE POLICY "Public can create appointments" ON public.appointments
+    FOR INSERT TO anon, authenticated
+    WITH CHECK (true);
+
+CREATE POLICY "Public can read appointments" ON public.appointments
+    FOR SELECT TO anon, authenticated
+    USING (true);
+
 CREATE POLICY "Admins can manage appointments" ON public.appointments
+    FOR ALL TO authenticated
+    USING (public.is_current_admin())
+    WITH CHECK (public.is_current_admin());
+
+-- FERIADOS
+CREATE POLICY "Public can read holidays" ON public.holidays
+    FOR SELECT TO anon, authenticated
+    USING (true);
+
+CREATE POLICY "Admins can manage holidays" ON public.holidays
     FOR ALL TO authenticated
     USING (public.is_current_admin())
     WITH CHECK (public.is_current_admin());
@@ -106,7 +142,7 @@ $$;
 REVOKE ALL ON FUNCTION public.get_public_booked_slots(UUID, DATE) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.get_public_booked_slots(UUID, DATE) TO anon, authenticated;
 
--- 4. Public booking RPC. It calculates price/duration server-side and blocks overlaps.
+-- 4. Public booking RPC. Uses barber_schedules table.
 CREATE OR REPLACE FUNCTION public.create_public_appointment(
     p_barber_id UUID,
     p_service_ids UUID[],
@@ -132,6 +168,8 @@ DECLARE
     v_end_min INTEGER;
     v_schedule_start_min INTEGER;
     v_schedule_end_min INTEGER;
+    v_day_of_week INTEGER;
+    v_schedule public.barber_schedules%ROWTYPE;
     v_appointment_id UUID;
 BEGIN
     IF p_client_name IS NULL OR length(trim(p_client_name)) < 2 THEN
@@ -156,13 +194,21 @@ BEGIN
         RAISE EXCEPTION 'Barbeiro indisponível.';
     END IF;
 
-    IF NOT (extract(dow from p_appointment_date)::int = ANY(v_barber.work_days)) THEN
+    v_day_of_week := extract(dow from p_appointment_date)::int;
+
+    SELECT *
+    INTO v_schedule
+    FROM public.barber_schedules
+    WHERE barber_id = p_barber_id
+      AND day_of_week = v_day_of_week;
+
+    IF NOT FOUND THEN
         RAISE EXCEPTION 'Barbeiro não atende nesta data.';
     END IF;
 
     WITH selected_services AS (
         SELECT DISTINCT unnest(p_service_ids) AS id
-    ),
+        ),
     active_services AS (
         SELECT s.id, s.name, s.price, s.duration_min, s.sort_order
         FROM public.services s
@@ -184,8 +230,8 @@ BEGIN
 
     v_start_min := extract(hour from p_appointment_time)::int * 60 + extract(minute from p_appointment_time)::int;
     v_end_min := v_start_min + v_total_duration;
-    v_schedule_start_min := extract(hour from v_barber.schedule_start)::int * 60 + extract(minute from v_barber.schedule_start)::int;
-    v_schedule_end_min := extract(hour from v_barber.schedule_end)::int * 60 + extract(minute from v_barber.schedule_end)::int;
+    v_schedule_start_min := extract(hour from v_schedule.start_time)::int * 60 + extract(minute from v_schedule.start_time)::int;
+    v_schedule_end_min := extract(hour from v_schedule.end_time)::int * 60 + extract(minute from v_schedule.end_time)::int;
 
     IF v_start_min < v_schedule_start_min OR v_end_min > v_schedule_end_min THEN
         RAISE EXCEPTION 'Horário fora do expediente.';

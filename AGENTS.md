@@ -553,7 +553,7 @@ CREATE TABLE IF NOT EXISTS barber_schedules (
 );
 ALTER TABLE barber_schedules ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Public can read barber schedules" ON barber_schedules FOR SELECT USING (true);
-CREATE POLICY "Authenticated users can manage barber schedules" ON barber_schedules FOR ALL USING (auth.role() = 'authenticated');
+CREATE POLICY "Authenticated users can manage barber schedules" ON barber_schedules FOR ALL USING (auth.role() = 'authenticated'));
 
 -- 3. Migrar dados antigos (schedule_start/schedule_end/work_days -> barber_schedules)
 INSERT INTO barber_schedules (barber_id, day_of_week, start_time, end_time)
@@ -575,6 +575,52 @@ ON CONFLICT (barber_id, day_of_week) DO NOTHING;
 - `agendar.js` — Reescrito: usa barber_schedules, works_holidays, feriados por barbeiro
 - `index.html` — Horario dinamico via barber_schedules
 - Todos sincronizados em `static/`
+
+**Pendencias:**
+- Implementar notificacoes WhatsApp (Evolution API ou Z-API)
+- Chatbot WhatsApp para agendamento
+- Relatorios (faturamento, clientes recorrentes)
+- Sistema de avaliacao
+
+---
+
+### Sessao 11 — 13/05/2026
+**Agente:** opencode (glm-5.1)
+**Tarefas realizadas:**
+- **Correcao: exibir campo obs no dashboard admin:**
+  - Antes: o campo obs estava sendo salvo no banco (Sessao 7) mas NAO era exibido no dashboard admin
+  - Agora: a obs aparece nos cards de agendamento (Dashboard e aba Agendamentos)
+  - A obs e mostrada como um badge destacado com cor de aviso (warning/yellow) abaixo dos detalhes do agendamento
+  - A obs aparece com icone de envelope (📧) e texto destacado para facilitar leitura
+- **Implementacao:**
+  - `admin.js` — Funcao `renderAppointmentsList()` modificada para verificar `a.obs` e criar elemento HTML `.appointment-obs`
+  - `admin.css` — Novo estilo `.appointment-obs` com cor warning/background-light, padding, borda arredondada
+  - A obs so aparece se o cliente preencheu o campo durante o agendamento
+- Sincronizou `admin.js` e `admin.css` com pasta `static/`
+- Commit e push para o GitHub (`4c7b26a`)
+
+**Arquivos modificados:**
+- `admin.js` — `renderAppointmentsList()` adiciona obsHtml quando a.obs existe
+- `admin.css` — Novo estilo `.appointment-obs` (cor warning, destaque visual)
+- `static/admin.js` — Sincronizado
+- `static/admin.css` — Sincronizado
+
+**CSS adicionado:**
+```css
+.appointment-obs {
+    font-size: 0.8rem;
+    color: var(--warning);
+    background: var(--warning-light);
+    padding: 4px 10px;
+    border-radius: 6px;
+    margin-top: 4px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    max-width: 100%;
+    word-break: break-word;
+}
+```
 
 **Pendencias:**
 - Implementar notificacoes WhatsApp (Evolution API ou Z-API)
