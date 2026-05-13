@@ -822,6 +822,54 @@ CREATE POLICY "Admins can delete admins" ON public.admins
 
 ---
 
+### Sessão 16 — 13/05/2026
+**Agente:** opencode (glm-4.7)
+**Tarefas realizadas:**
+- **Modal de detalhes do agendamento com UX aprimorada:**
+  - Cards de agendamento agora sao clicaveis para abrir modal de detalhes completos
+  - Botões de ação direta (concluir, cancelar, WhatsApp) removidos da lista para evitar ações acidentais
+  - Modal exibe todas as informações: cliente, telefone, barbeiro, serviço(s), data, hora, total, observações
+  - Status badge grande e colorido no topo do modal
+- **Links do WhatsApp no modal:**
+  - Botão "WhatsApp" abre conversa normal com mensagem personalizada
+  - Ao cancelar agendamento, exibe alerta para notificar cliente primeiro
+  - Link pré-formatado para notificação de cancelamento com todos os detalhes (serviço, data, hora, barbeiro, link para reagendar)
+- **Ações contextuais por status:**
+  - Pendente: botão "Confirmar"
+  - Confirmado/Pendente: botão "Concluir" e botão "Cancelar"
+  - Cancelado/Concluído: botão "Remover do Histórico"
+  - Todos têm botão "Fechar"
+- **Fluxo de cancelamento aprimorado:**
+  - Ao clicar em "Cancelar", exibe aviso em destaque com fundo vermelho claro
+  - Botão "Notificar Cliente (WhatsApp)" abre WhatsApp com mensagem de cancelamento pronta
+  - Botão "Confirmar Cancelamento" só deve ser clicado APÓS notificar cliente
+  - Botão "Voltar" para voltar ao modal de detalhes caso mude de ideia
+- **UX melhorias:**
+  - Lista de agendamentos mais limpa e organizada
+  - Redução de clicar botões errados por acidente
+  - Mais contexto antes de tomar decisões importantes
+  - Telefone exibido na lista de agendamentos (mobile-friendly)
+- Sincronizou arquivos com pasta `static/`
+- Commit e push para o GitHub (`eaa60c0`)
+
+**Arquivos modificados:**
+- `admin.js` — showAppointmentDetails, closeAppointmentDetails, confirmAppointment, cancelAppointmentFromDetails, confirmCancel, deleteAppointment, getWhatsAppLink, getWhatsAppCancelLink; renderAppointmentsList atualizado com onclick no card; completeAppointment refatorada
+- `static/admin.js` — Sincronizado
+
+**Notas importantes:**
+- O modal de detalhes fornece todas as informações em um só lugar, facilitando decisões
+- O fluxo de cancelamento exige que o admin notifique o cliente antes de confirmar, reduzindo problemas de comunicação
+- Links do WhatsApp são pré-formatados com mensagens personalizadas
+- A lista de agendamentos fica mais limpa sem múltiplos botões em cada card
+
+**Pendencias:**
+- Implementar notificacoes WhatsApp (Evolution API ou Z-API)
+- Chatbot WhatsApp para agendamento
+- Relatorios (faturamento, clientes recorrentes)
+- Sistema de avaliacao
+
+---
+
 ### Plano do Sistema Completo (Roadmap)
 
 #### Fase 1 — Concluida
