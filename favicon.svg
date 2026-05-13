@@ -1,4 +1,9 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-  <rect width="32" height="32" rx="4" fill="#2D4B40"/>
-  <text x="16" y="20" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#FFD700" text-anchor="middle">P</text>
+  <rect width="32" height="32" rx="6" fill="#2D4B40"/>
+  <g transform="translate(16,16)" fill="none" stroke="#FFD700" stroke-width="1.5" stroke-linecap="round">
+    <circle cx="-3" cy="-6" r="3.5"/>
+    <circle cx="3" cy="-6" r="3.5"/>
+    <line x1="-5.5" y1="-3.2" x2="0" y2="9"/>
+    <line x1="5.5" y1="-3.2" x2="0" y2="9"/>
+  </g>
 </svg>

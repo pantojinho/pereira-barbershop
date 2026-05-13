@@ -299,6 +299,24 @@ body {
     color: var(--white);
 }
 
+.btn-home {
+    color: rgba(255,255,255,0.7);
+    text-decoration: none;
+    font-size: 0.8rem;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 12px;
+    border-radius: var(--radius);
+    transition: all 0.2s;
+}
+
+.btn-home:hover {
+    color: var(--white);
+    background: rgba(255,255,255,0.1);
+}
+
 /* ========== NAV TABS ========== */
 
 .admin-nav {
