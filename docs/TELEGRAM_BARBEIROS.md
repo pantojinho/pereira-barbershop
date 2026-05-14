@@ -20,22 +20,36 @@ Abra o bot e envie o comando:
 /start
 ```
 
-Só isso! Agora é só avisar ao **Gabriel** que você já iniciou o bot.
+---
+
+## 📱 Passo 3: Pegar seu Chat ID
+
+Depois de enviar `/start`, o bot vai responder com seu **Chat ID**. Vai aparecer algo assim:
+
+```
+👋 Oi, [SEU NOME]!
+
+📱 Seu Chat ID é: [NÚMERO]
+
+💡 Copie este número e envie para o Gabriel!
+```
+
+**Copie esse número!** É ele que você vai mandar para o Gabriel.
 
 ---
 
-## ✅ O Gabriel Vai Configurar
+## ✅ Passo 4: Enviar para o Gabriel
 
-Ele vai:
-1. Buscar seu ID automaticamente
-2. Adicionar no painel administrativo
-3. Te avisar quando estiver pronto
+Mande o Chat ID para o Gabriel:
+- Pode ser pelo WhatsApp
+- Pode ser pelo Telegram
+- Pode ser pessoalmente
 
 ---
 
 ## 🎉 Pronto!
 
-Depois de configurado, quando um cliente agendar pelo site, você recebe automaticamente:
+Depois que o Gabriel configurar, quando um cliente agendar pelo site, você recebe automaticamente:
 
 - 📱 **Nome do cliente**
 - ⏰ **Data e horário**
@@ -46,7 +60,7 @@ Depois de configurado, quando um cliente agendar pelo site, você recebe automat
 
 ## Testar
 
-Faça um agendamento de teste aqui:
+Depois de configurado, faça um agendamento de teste aqui:
 https://pereira-barbershop.vercel.app/agendar.html
 
 A notificação chega em **menos de 1 segundo**! ⚡

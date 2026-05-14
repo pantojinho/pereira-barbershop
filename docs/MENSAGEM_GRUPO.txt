@@ -1,0 +1,25 @@
+📲 NOTIFICAÇÕES NO TELEGRAM
+
+Barbeiros, configurem o Telegram para receber notificações dos agendamentos!
+
+🎯 PASSO 1 - Abrir o bot:
+https://t.me/PereiraBarbershop_bot
+
+🚀 PASSO 2 - Enviar /start
+
+📱 PASSO 3 - O bot vai responder com seu Chat ID
+   → Copie esse número
+
+✅ PASSO 4 - Enviar o Chat ID para o Gabriel
+   → Pelo WhatsApp, Telegram ou pessoalmente
+
+🎉 Depois disso, quando um cliente agendar pelo site, você recebe automaticamente:
+• Nome do cliente
+• Data e horário
+• Serviço
+• Telefone
+
+A notificação chega em menos de 1 segundo! ⚡
+
+Link do site para testar:
+https://pereira-barbershop.vercel.app/agendar.html
