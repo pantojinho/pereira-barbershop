@@ -29,7 +29,7 @@ bash scripts/configurar_webhook.sh
 🔗 Configurando Webhook do Telegram
 --------------------------------------------------
 
-📍 Webhook URL: https://pereira-barbershop.vercel.app/api/telegram
+📍 Webhook URL: https://www.pereira-barbershop.com.br/api/telegram
 
 🚀 Enviando configuração...
 ✅ Webhook configurado com sucesso!
@@ -41,7 +41,7 @@ bash scripts/configurar_webhook.sh
 {
   "ok": true,
   "result": {
-    "url": "https://pereira-barbershop.vercel.app/api/telegram",
+    "url": "https://www.pereira-barbershop.com.br/api/telegram",
     "has_custom_certificate": false,
     "pending_update_count": 0
   }
@@ -82,7 +82,7 @@ bash scripts/configurar_webhook.sh
 
 ### Como funciona o webhook
 
-- Telegram envia mensagens para: `https://pereira-barbershop.vercel.app/api/telegram`
+- Telegram envia mensagens para: `https://www.pereira-barbershop.com.br/api/telegram`
 - Vercel roda a função `/api/telegram.js` automaticamente
 - A função processa a mensagem e responde
 - Funciona 24/7 sem precisar de servidor dedicado
@@ -103,7 +103,7 @@ Verifique o webhook:
 curl -s "https://api.telegram.org/bot8932305524:AAE4CBvVQb-lMG4lnE57WVRKr7Pdwteewds/getWebhookInfo" | jq
 ```
 
-A `url` deve ser: `https://pereira-barbershop.vercel.app/api/telegram`
+A `url` deve ser: `https://www.pereira-barbershop.com.br/api/telegram`
 
 #### Erro ao configurar
 

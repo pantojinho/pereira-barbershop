@@ -21,21 +21,25 @@
 
     // ========== HELPERS ==========
 
+    /** Atalhos DOM */
     function $(id) { return document.getElementById(id); }
     function $$(sel) { return document.querySelectorAll(sel); }
 
+    /** Escapa HTML para prevenir XSS */
     function escapeHTML(value) {
         return String(value == null ? '' : value).replace(/[&<>"']/g, function (ch) {
             return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch];
         });
     }
 
+    /** Formata valor numérico como moeda brasileira R$ XX,XX */
     function formatPrice(value) {
         return 'R$ ' + Number(value).toFixed(2).replace('.', ',');
     }
 
     // ========== CART HELPERS ==========
 
+    /** Calcula valor total do carrinho */
     function getCartTotal() {
         var total = 0;
         for (var id in cart) {
@@ -45,6 +49,7 @@
         return total;
     }
 
+    /** Retorna quantidade total de itens no carrinho */
     function getCartCount() {
         var count = 0;
         for (var id in cart) { count += cart[id]; }
@@ -52,6 +57,7 @@
     }
 
     // Atualiza o badge flutuante "X itens" na barra de navegacao
+    /** Atualiza badge de quantidade do carrinho no header */
     function updateCartBadge() {
         var count = getCartCount();
         var badge = $('cart-badge');
@@ -64,6 +70,7 @@
     }
 
     // Atualiza visual dos cards de produto (borda verde quando no carrinho)
+    /** Atualiza estado visual dos botões de adicionar/remover nos cards de produto */
     function updateProductCards() {
         $$('.product-card').forEach(function (card) {
             var id = card.getAttribute('data-id');
@@ -81,6 +88,7 @@
 
     // ========== ACOES DO CARRINHO (chamadas via ShopApp no onclick) ==========
 
+    /** Adiciona um produto ao carrinho */
     function addToCart(id) {
         if (!cart[id]) cart[id] = 0;
         var p = PRODUCTS_DB.find(function (pr) { return pr.id === id; });
@@ -94,6 +102,7 @@
         updateNavButtons();
     }
 
+    /** Remove um produto do carrinho */
     function removeFromCart(id) {
         if (cart[id] && cart[id] > 0) {
             cart[id]--;
@@ -106,6 +115,7 @@
 
     // ========== INIT: carrega produtos do Supabase ==========
 
+    /** Inicializa a lojinha: carrega produtos e configura navegação */
     async function init() {
         await loadProducts();
         setupNav();
@@ -113,6 +123,7 @@
     }
 
     // Carrega produtos ativos do Supabase e renderiza os cards com botoes +/-
+    /** Carrega produtos ativos do Supabase e renderiza os cards */
     async function loadProducts() {
         try {
             var result = await sb.from('products').select('*').eq('active', true).order('sort_order').order('name');
@@ -153,6 +164,7 @@
 
     // ========== PASSO 2: RENDER DO CARRINHO ==========
 
+    /** Renderiza o conteúdo do carrinho no step 2 */
     function renderCart() {
         var container = $('cart-items');
         var keys = Object.keys(cart);
@@ -187,6 +199,7 @@
         $('cart-total').textContent = formatPrice(getCartTotal());
     }
 
+    /** Diminui quantidade de um item no carrinho (step 2 inline) */
     function cartMinus(id) {
         if (cart[id] && cart[id] > 1) {
             cart[id]--;
@@ -198,6 +211,7 @@
         updateNavButtons();
     }
 
+    /** Aumenta quantidade de um item no carrinho (step 2 inline) */
     function cartPlus(id) {
         if (!cart[id]) cart[id] = 0;
         var p = PRODUCTS_DB.find(function (pr) { return pr.id === id; });
@@ -213,6 +227,7 @@
 
     // ========== PASSO 3: RENDER DO RESUMO DO PEDIDO ==========
 
+    /** Renderiza o resumo do pedido no step 3 (dados do cliente) */
     function renderOrderSummary() {
         var container = $('order-summary-items');
         var keys = Object.keys(cart);

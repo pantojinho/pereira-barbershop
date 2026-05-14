@@ -20,4 +20,4 @@ https://t.me/PereiraBarbershop_bot
 
 A notificação chega em menos de 1 segundo! ⚡
 
-Site: https://pereira-barbershop.vercel.app/agendar.html
+Site: https://www.pereira-barbershop.com.br/agendar.html

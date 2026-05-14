@@ -1,24 +1,76 @@
+/**
+ * admin.js — Painel Administrativo da Pereira's Barber Shop
+ *
+ * Arquivo principal de lógica do painel administrativo. Gerencia:
+ *   - Autenticação via Supabase Auth (login/logout com signInWithPassword)
+ *   - Dashboard com resumo do dia e da semana
+ *   - CRUD completo de barbeiros (com horários por dia e upload de foto)
+ *   - CRUD completo de serviços (nome, preço, duração, destaque)
+ *   - CRUD completo de produtos da lojinha (com foto e controle de estoque)
+ *   - Gerenciamento de pedidos/reservas de produtos
+ *   - Gerenciamento de usuários administradores e barbeiros (roles)
+ *   - Agendamentos: listagem, filtros, confirmação, cancelamento, reagendamento
+ *   - Notificações em tempo real (polling + Supabase Realtime, Telegram, browser push)
+ *   - Integração WhatsApp para comunicação com clientes
+ *
+ * Dependências externas:
+ *   - supabase-config.js (define SUPABASE_URL, SUPABASE_ANON_KEY, TELEGRAM_BOT_TOKEN)
+ *   - Supabase JS Client (carregado via CDN no admin.html)
+ *
+ * Estrutura: Toda a lógica é encapsulada em uma IIFE (Immediately Invoked Function
+ * Expression) para evitar poluição do escopo global. Apenas o objeto `AdminApp`
+ * é exposto em `window` para callbacks inline nos templates HTML gerados.
+ */
 (function () {
     'use strict';
 
+    // ── Supabase Client ──────────────────────────────────────────────────────
+    // Inicializa o client Supabase com as credenciais definidas em supabase-config.js.
+    // A variável `sb` é usada em todas as operações de banco (queries, auth, storage).
     var sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    // ── Paginação ────────────────────────────────────────────────────────────
+    // Número máximo de agendamentos exibidos por página na listagem.
     var ITEMS_PER_PAGE = 15;
+    // Página atual da listagem de agendamentos (alterada pela navegação de paginação).
     var currentPage = 1;
 
-    var currentUserRole = 'admin';
-    var currentUserBarberId = null;
-    var currentUserBarberName = null;
+    // ── Controle de Acesso (RBAC) ────────────────────────────────────────────
+    // O sistema suporta dois papéis:
+    //   - 'admin': acesso total a todas as abas (barbeiros, serviços, produtos, etc.)
+    //   - 'barber': acesso restrito apenas ao dashboard e aos próprios agendamentos.
+    // Essas variáveis são preenchidas após o login em verifyAdminAccess().
+    var currentUserRole = 'admin';       // Papel do usuário logado ('admin' ou 'barber')
+    var currentUserBarberId = null;       // ID do barbeiro vinculado (se role === 'barber')
+    var currentUserBarberName = null;     // Nome do barbeiro vinculado (para exibição)
 
-    function $(id) { return document.getElementById(id); }
-    function qs(sel) { return document.querySelector(sel); }
-    function qsa(sel) { return document.querySelectorAll(sel); }
+    // ── DOM Helpers ──────────────────────────────────────────────────────────
+    // Atalhos para seleção de elementos DOM, usados extensivamente por todo o arquivo.
+    function $(id) { return document.getElementById(id); }        // Seleciona por ID
+    function qs(sel) { return document.querySelector(sel); }      // Seleciona o primeiro match
+    function qsa(sel) { return document.querySelectorAll(sel); }  // Seleciona todos os matches
 
+    // ── Funções Utilitárias ──────────────────────────────────────────────────
+
+    /**
+     * Escapa caracteres HTML especiais para prevenir XSS ao injetar dados do
+     * banco em innerHTML. Converte &, <, >, ", ' para suas entidades HTML.
+     * @param {*} value - Qualquer valor (será convertido para string).
+     * @returns {string} String com caracteres perigosos escapados.
+     */
     function escapeHTML(value) {
         return String(value == null ? '' : value).replace(/[&<>"']/g, function (ch) {
             return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch];
         });
     }
 
+    /**
+     * Escapa strings para uso seguro dentro de aspas simples em JavaScript inline
+     * (ex: onclick="AdminApp.editBarber('...')"). Escapa barras invertidas,
+     * aspas simples e remove quebras de linha.
+     * @param {*} value - Valor a ser escapado.
+     * @returns {string} String segura para embed em atributos JS inline.
+     */
     function jsString(value) {
         return String(value == null ? '' : value)
             .replace(/\\/g, '\\\\')
@@ -26,28 +78,64 @@
             .replace(/\r?\n/g, ' ');
     }
 
+    /**
+     * Formata uma data (string ISO "YYYY-MM-DD") para exibição amigável em pt-BR,
+     * incluindo o dia da semana abreviado. Ex: "Seg, 12/05/2026".
+     * O sufixo "T00:00:00" garante que a data seja interpretada no fuso local,
+     * evitando problemas de timezone com datas puras.
+     * @param {string} dateStr - Data no formato "YYYY-MM-DD".
+     * @returns {string} Data formatada com dia da semana.
+     */
     function formatDate(dateStr) {
         var d = new Date(dateStr + 'T00:00:00');
         var days = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab'];
         return days[d.getDay()] + ', ' + d.toLocaleDateString('pt-BR');
     }
 
+    /**
+     * Formata número de telefone para o padrão brasileiro: (XX) XXXXX-XXXX.
+     * Remove todos os não-dígitos antes de aplicar a máscara.
+     * @param {string} phone - Telefone com ou sem formatação.
+     * @returns {string} Telefone formatado.
+     */
     function formatPhone(phone) {
         return phone.replace(/\D/g, '').replace(/^(\d{2})(\d{5})(\d{4})$/, '($1) $2-$3');
     }
 
+    /**
+     * Formata um valor numérico como moeda brasileira (R$ XX,XX).
+     * @param {number} value - Valor numérico.
+     * @returns {string} Valor formatado, ex: "R$ 43,00".
+     */
     function formatCurrency(value) {
         return 'R$ ' + Number(value).toFixed(2).replace('.', ',');
     }
 
+    /**
+     * Extrai apenas HH:MM de uma string de horário (pode vir como "HH:MM:SS").
+     * @param {string} timeStr - Horário, possivelmente com segundos.
+     * @returns {string} Horário no formato "HH:MM".
+     */
     function formatTime(timeStr) {
         return timeStr.substring(0, 5);
     }
 
+    /**
+     * Mapa de números de dia da semana (0=Dom, 6=Sáb) para nomes abreviados.
+     * Usado na exibição de horários de trabalho dos barbeiros.
+     */
     var DAY_NAMES = {
         0: 'Dom', 1: 'Seg', 2: 'Ter', 3: 'Qua', 4: 'Qui', 5: 'Sex', 6: 'Sáb'
     };
 
+    // ── UI Helpers (Toast, Modal, Confirm) ───────────────────────────────────
+
+    /**
+     * Exibe uma notificação temporária (toast) na tela por 3 segundos.
+     * Usada para feedback visual de operações (sucesso/erro).
+     * @param {string} msg - Mensagem a exibir.
+     * @param {string} [type] - Tipo CSS: 'success', 'error', ou vazio.
+     */
     function toast(msg, type) {
         var el = document.createElement('div');
         el.className = 'toast ' + (type || '');
@@ -56,6 +144,15 @@
         setTimeout(function () { el.remove(); }, 3000);
     }
 
+    /**
+     * Abre o modal genérico de formulário (usado para criar/editar barbeiros,
+     * serviços, produtos e administradores).
+     * @param {string} title - Título do modal.
+     * @param {string} bodyHTML - Conteúdo HTML do corpo do modal (formulário).
+     * @param {Function} [onSave] - Callback executado ao clicar em "Salvar".
+     * @param {Function} [onOpen] - Callback executado após o modal ser aberto
+     *   (útil para inicializar listeners de inputs, previews de foto, etc.).
+     */
     function showModal(title, bodyHTML, onSave, onOpen) {
         $('modal-title').textContent = title;
         $('modal-body').innerHTML = bodyHTML;
@@ -66,10 +163,17 @@
         if (onOpen) onOpen();
     }
 
+    /** Fecha o modal genérico de formulário. */
     function hideModal() {
         $('modal-overlay').style.display = 'none';
     }
 
+    /**
+     * Exibe um diálogo de confirmação (ex: "Tem certeza que deseja excluir?").
+     * @param {string} title - Título do diálogo.
+     * @param {string} msg - Mensagem descritiva da ação.
+     * @param {Function} [onConfirm] - Callback executado ao confirmar.
+     */
     function showConfirm(title, msg, onConfirm) {
         $('confirm-title').textContent = title;
         $('confirm-body').textContent = msg;
@@ -80,30 +184,64 @@
         };
     }
 
+    /** Fecha o diálogo de confirmação sem executar a ação. */
     function hideConfirm() {
         $('confirm-overlay').style.display = 'none';
     }
 
+    // ── Funções de Data ──────────────────────────────────────────────────────
+
+    /**
+     * Retorna a data de hoje no formato "YYYY-MM-DD" (fuso local do navegador).
+     * Usada extensivamente para queries de agendamentos do dia.
+     * @returns {string} Data atual no formato ISO.
+     */
     function todayStr() {
         var d = new Date();
         return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
     }
 
+    /**
+     * Calcula o intervalo da semana atual (segunda a domingo) no formato ISO.
+     * Usada para estatísticas semanais no dashboard.
+     * @returns {{ start: string, end: string }} Datas de segunda e domingo ("YYYY-MM-DD").
+     */
     function getWeekRange() {
         var now = new Date();
         var day = now.getDay();
         var monday = new Date(now);
-        monday.setDate(now.getDate() - ((day + 6) % 7));
+        monday.setDate(now.getDate() - ((day + 6) % 7));  // Recua até a segunda-feira
         var sunday = new Date(monday);
-        sunday.setDate(monday.getDate() + 6);
+        sunday.setDate(monday.getDate() + 6);  // Avança até o domingo
         return {
             start: monday.getFullYear() + '-' + String(monday.getMonth() + 1).padStart(2, '0') + '-' + String(monday.getDate()).padStart(2, '0'),
             end: sunday.getFullYear() + '-' + String(sunday.getMonth() + 1).padStart(2, '0') + '-' + String(sunday.getDate()).padStart(2, '0')
         };
     }
 
-    // ========== AUTH ==========
+    // ══════════════════════════════════════════════════════════════════════════
+    // ═─ AUTENTICAÇÃO (Supabase Auth) ══════════════════════════════════════════
+    // ══════════════════════════════════════════════════════════════════════════
+    //
+    // Fluxo de autenticação:
+    //   1. Usuário preenche email + senha no formulário de login
+    //   2. handleLogin() chama sb.auth.signInWithPassword() (Supabase Auth)
+    //   3. verifyAdminAccess() verifica se o usuário está na tabela 'admins'
+    //      e carrega seu papel (role) e barber_id
+    //   4. Se autorizado, showAdminPanel() inicializa o painel
+    //   5. checkSession() é chamado ao carregar a página para restaurar sessão
+    //
+    // O sistema suporta dois papéis:
+    //   - 'admin': acesso total ao painel
+    //   - 'barber': acesso restrito ao dashboard e próprios agendamentos
+    // ══════════════════════════════════════════════════════════════════════════
 
+    /**
+     * Manipula o submit do formulário de login.
+     * Autentica via Supabase Auth (signInWithPassword) e verifica permissão
+     * de admin antes de exibir o painel.
+     * @param {Event} e - Evento de submit do formulário.
+     */
     async function handleLogin(e) {
         e.preventDefault();
         var email = $('login-email').value.trim();
@@ -142,6 +280,11 @@
         }
     }
 
+    /**
+     * Realiza logout do painel administrativo.
+     * Limpa todas as inscrições em tempo real (Realtime + polling), zera caches
+     * de notificação e faz signOut no Supabase Auth.
+     */
     async function handleLogout() {
         if (_realtimeSubscription) {
             try { sb.removeAllChannels(); } catch (e) {}
@@ -161,6 +304,11 @@
         $('login-password').value = '';
     }
 
+    /**
+     * Verifica se existe uma sessão ativa do Supabase Auth ao carregar a página.
+     * Se houver sessão válida, verifica permissão e mostra o painel automaticamente
+     * (auto-login). Caso contrário, exibe a tela de login.
+     */
     async function checkSession() {
         var result = await sb.auth.getSession();
         if (result.data && result.data.session) {
@@ -178,6 +326,18 @@
         }
     }
 
+    /**
+     * Verifica se o usuário autenticado tem permissão de acesso ao painel.
+     *
+     * Estratégia de verificação (em ordem de prioridade):
+     *   1. Tenta chamar a RPC 'is_current_admin' (definida em supabase-security-hardening.sql).
+     *      Se retornar true, busca o papel (role) e barber_id na tabela 'admins'.
+     *   2. Se a RPC não existir (hardening SQL ainda não aplicado), permite acesso
+     *      por compatibilidade temporária e avisa no console.
+     *   3. Em caso de erro na RPC, faz fallback consultando diretamente a tabela 'admins'.
+     *
+     * @returns {Promise<boolean>} true se o usuário tem acesso de admin/barbeiro.
+     */
     async function verifyAdminAccess() {
         try {
             var rpcResult = await sb.rpc('is_current_admin');
@@ -215,6 +375,14 @@
         return false;
     }
 
+    /**
+     * Inicializa o painel administrativo após autenticação bem-sucedida.
+     * - Esconde a tela de login e mostra o painel
+     * - Se o papel for 'barber', esconde abas restritas e filtra dados
+     * - Carrega todos os dados iniciais (dashboard, barbeiros, serviços, etc.)
+     * - Inicia o sistema de notificações em tempo real
+     * @param {Object} user - Objeto do usuário retornado pelo Supabase Auth.
+     */
     function showAdminPanel(user) {
         $('login-screen').style.display = 'none';
         $('admin-panel').style.display = 'block';
@@ -255,8 +423,15 @@
         startNotifications();
     }
 
-    // ========== TAB NAVIGATION ==========
+    // ══════════════════════════════════════════════════════════════════════════
+    // ═─ NAVEGAÇÃO POR ABAS ═══════════════════════════════════════════════════
+    // ══════════════════════════════════════════════════════════════════════════
 
+    /**
+     * Alterna a aba ativa no painel. Remove a classe 'active' de todas as abas
+     * e painéis, e adiciona apenas à aba e painel selecionados.
+     * @param {string} tabName - Nome da aba (dashboard, appointments, barbers, etc.)
+     */
     function switchTab(tabName) {
         qsa('.nav-tab').forEach(function (t) { t.classList.remove('active'); });
         qsa('.tab-panel').forEach(function (p) { p.classList.remove('active'); });
@@ -266,8 +441,23 @@
         if (panel) panel.classList.add('active');
     }
 
-    // ========== DASHBOARD ==========
+    // ══════════════════════════════════════════════════════════════════════════
+    // ═─ DASHBOARD ═════════════════════════════════════════════════════════════
+    // ══════════════════════════════════════════════════════════════════════════
+    // O dashboard exibe um resumo geral do dia e da semana:
+    //   - Número de agendamentos hoje e na semana
+    //   - Número de barbeiros ativos
+    //   - Faturamento do dia (soma de total_price dos agendamentos)
+    //   - Cards por barbeiro com próximo horário
+    //   - Lista de agendamentos do dia (filtrável por barbeiro)
+    // ══════════════════════════════════════════════════════════════════════════
 
+    /**
+     * Carrega e exibe os dados do dashboard.
+     * Busca agendamentos de hoje, da semana, lista de barbeiros ativos e
+     * calcula o faturamento do dia. Para barbeiros (role 'barber'), filtra
+     * automaticamente os dados para mostrar apenas os próprios agendamentos.
+     */
     async function loadDashboard() {
         var today = todayStr();
         var week = getWeekRange();
@@ -315,6 +505,14 @@
         }
     }
 
+    /**
+     * Renderiza os cards de resumo por barbeiro no dashboard.
+     * Cada card mostra o nome do barbeiro, número de agendamentos do dia e
+     * o próximo horário. Clicar no card filtra os agendamentos exibidos.
+     * @param {Array} barbers - Lista de barbeiros ativos.
+     * @param {Array} appointments - Agendamentos do dia.
+     * @param {string} selectedBarber - ID do barbeiro selecionado (ou vazio para todos).
+     */
     function renderDashboardBarberSummary(barbers, appointments, selectedBarber) {
         var container = $('dashboard-barber-summary');
         if (!container) return;
@@ -344,8 +542,24 @@
         });
     }
 
-    // ========== APPOINTMENTS ==========
+    // ══════════════════════════════════════════════════════════════════════════
+    // ═─ AGENDAMENTOS ══════════════════════════════════════════════════════════
+    // ══════════════════════════════════════════════════════════════════════════
+    // Gerencia os agendamentos da barbearia:
+    //   - Listagem paginada com filtros (barbeiro, status, data)
+    //   - Detalhes do agendamento em overlay lateral
+    //   - Ações: confirmar, concluir, cancelar, reagendar, excluir
+    //   - Integração WhatsApp para notificar clientes
+    //   - Calendário de reagendamento com verificação de disponibilidade
+    // ══════════════════════════════════════════════════════════════════════════
 
+    /**
+     * Carrega a lista de agendamentos com paginação e filtros.
+     * Aplica filtros por barbeiro, status e data. Se o usuário for barbeiro,
+     * filtra automaticamente para mostrar apenas seus próprios agendamentos.
+     * Utiliza paginação com ITEMS_PER_PAGE (15) itens por página.
+     * @param {number} [page=1] - Número da página a carregar.
+     */
     async function loadAppointments(page) {
         page = page || 1;
         currentPage = page;
@@ -378,6 +592,15 @@
         }
     }
 
+    /**
+     * Renderiza uma lista de agendamentos em um container HTML.
+     * Usado tanto pelo dashboard (isSimple=true, sem data/telefone) quanto pela
+     * listagem completa de agendamentos (isSimple=false).
+     * Cada card é clicável e abre os detalhes do agendamento.
+     * @param {string} containerId - ID do elemento DOM container.
+     * @param {Array} appointments - Lista de agendamentos.
+     * @param {boolean} isSimple - Se true, omite data e telefone (modo dashboard).
+     */
     function renderAppointmentsList(containerId, appointments, isSimple) {
         var container = $(containerId);
         if (!appointments.length) {
@@ -415,6 +638,12 @@
         }).join('');
     }
 
+    /**
+     * Renderiza os botões de paginação para a listagem de agendamentos.
+     * Mostra no máximo 7 números de página com reticências (...) quando necessário.
+     * @param {number} total - Total de agendamentos encontrados.
+     * @param {number} current - Página atual.
+     */
     function renderPagination(total, current) {
         var container = $('appointments-pagination');
         if (!total || total <= ITEMS_PER_PAGE) {
@@ -439,6 +668,11 @@
         container.innerHTML = html;
     }
 
+    /**
+     * Marca um agendamento como 'completed' (concluído).
+     * Atualiza o status no banco e recarrega dashboard e listagem.
+     * @param {string} id - UUID do agendamento.
+     */
     async function completeAppointment(id) {
         try {
             var result = await sb.from('appointments').update({ status: 'completed' }).eq('id', id);
@@ -456,6 +690,12 @@
         }
     }
 
+    /**
+     * Abre o WhatsApp com mensagem padrão para contato com o cliente.
+     * Adiciona o prefixo do país (55) se necessário.
+     * @param {string} phone - Telefone do cliente.
+     * @param {string} name - Nome do cliente (não usado na mensagem padrão).
+     */
     function openWhatsApp(phone, name) {
         var clean = phone.replace(/\D/g, '');
         if (!clean.startsWith('55')) clean = '55' + clean;
@@ -463,6 +703,15 @@
         window.open('https://wa.me/' + clean + '?text=' + encodeURIComponent(text), '_blank');
     }
 
+    /**
+     * Busca e exibe os detalhes completos de um agendamento em um overlay.
+     * Mostra: cliente, telefone, barbeiro, serviços, data, hora, preço total,
+     * observações e link WhatsApp. Botões de ação variam conforme o status:
+     *   - pending: Confirmar, Reagendar, Concluir, Cancelar
+     *   - confirmed: Reagendar, Concluir, Cancelar
+     *   - cancelled/completed: Remover do Histórico
+     * @param {string} id - UUID do agendamento.
+     */
     async function showAppointmentDetails(id) {
         try {
             var result = await sb.from('appointments').select('*, barber:barbers(name)').eq('id', id).single();
@@ -547,11 +796,18 @@
         }
     }
 
+    /** Fecha o overlay de detalhes do agendamento. */
     function closeAppointmentDetails() {
         $('appointment-details-overlay').style.display = 'none';
         window.currentAppointmentId = null;
     }
 
+    /**
+     * Gera um link de WhatsApp para contato com o cliente do agendamento.
+     * @param {string} phone - Telefone do cliente.
+     * @param {string} name - Nome do cliente (usado na saudação).
+     * @returns {string} URL completa do WhatsApp (wa.me).
+     */
     function getWhatsAppLink(phone, name) {
         var clean = phone.replace(/\D/g, '');
         if (!clean.startsWith('55')) clean = '55' + clean;
@@ -559,13 +815,23 @@
         return 'https://wa.me/' + clean + '?text=' + encodeURIComponent(text);
     }
 
+    /**
+     * Gera um link de WhatsApp com mensagem de cancelamento/reagendamento.
+     * Inclui detalhes do agendamento, pedido de desculpas e link para reagendar.
+     * @param {Object} appointment - Objeto completo do agendamento.
+     * @returns {string} URL completa do WhatsApp com mensagem de cancelamento.
+     */
     function getWhatsAppCancelLink(appointment) {
         var clean = appointment.client_phone.replace(/\D/g, '');
         if (!clean.startsWith('55')) clean = '55' + clean;
-        var text = 'Olá, ' + escapeHTML(appointment.client_name) + '! 😊 Gostaríamos de confirmar com você sobre seu agendamento de ' + escapeHTML((appointment.service_names || []).join(', ')) + ' em ' + formatDate(appointment.appointment_date) + ' às ' + formatTime(appointment.appointment_time) + ' com ' + escapeHTML(appointment.barber ? appointment.barber.name : 'Barbeiro') + '.\n\nAlgum imprevisto aconteceu e precisamos fazer um ajuste. Pedimos mil desculpas! ❤️\n\nVocê pode reagendar pelo site: https://pereira-barbershop.vercel.app/agendar.html\n\nAgradecemos desde já! ✂️';
+        var text = 'Olá, ' + escapeHTML(appointment.client_name) + '! 😊 Gostaríamos de confirmar com você sobre seu agendamento de ' + escapeHTML((appointment.service_names || []).join(', ')) + ' em ' + formatDate(appointment.appointment_date) + ' às ' + formatTime(appointment.appointment_time) + ' com ' + escapeHTML(appointment.barber ? appointment.barber.name : 'Barbeiro') + '.\n\nAlgum imprevisto aconteceu e precisamos fazer um ajuste. Pedimos mil desculpas! ❤️\n\nVocê pode reagendar pelo site: https://www.pereira-barbershop.com.br/agendar.html\n\nAgradecemos desde já! ✂️';
         return 'https://wa.me/' + clean + '?text=' + encodeURIComponent(text);
     }
 
+    /**
+     * Confirma um agendamento pendente, alterando status para 'confirmed'.
+     * @param {string} id - UUID do agendamento.
+     */
     async function confirmAppointment(id) {
         try {
             var result = await sb.from('appointments').update({ status: 'confirmed' }).eq('id', id);
@@ -583,6 +849,13 @@
         }
     }
 
+    /**
+     * Prepara o fluxo de cancelamento de um agendamento.
+     * Exibe um aviso para o admin notificar o cliente via WhatsApp ANTES de
+     * confirmar o cancelamento. Troca os botões do footer para "Reagendar",
+     * "Confirmar Cancelamento" e "Voltar".
+     * @param {string} id - UUID do agendamento.
+     */
     async function cancelAppointmentFromDetails(id) {
         try {
             var result = await sb.from('appointments').select('*, barber:barbers(name)').eq('id', id).single();
@@ -616,6 +889,12 @@
         }
     }
 
+    /**
+     * Inicia o fluxo de reagendamento de um agendamento.
+     * Busca os dados completos do agendamento, horários de trabalho do barbeiro
+     * e feriados. Abre o modal de reagendamento com calendário interativo.
+     * @param {string} id - UUID do agendamento.
+     */
     async function rescheduleAppointment(id) {
         try {
             var result = await sb.from('appointments').select('*, barber:barbers(name)').eq('id', id).single();
@@ -654,6 +933,11 @@
         }
     }
 
+    /**
+     * Renderiza o modal de reagendamento com calendário e seleção de horário.
+     * Exibe informações do agendamento atual e o calendário para escolha da nova data.
+     * Os botões de navegação de mês avançam/retrocedem o calendário.
+     */
     function renderRescheduleModal() {
         var a = _rescheduleState.appointment;
         var services = (a.service_names || []).join(', ');
@@ -698,6 +982,11 @@
         });
     }
 
+    /**
+     * Renderiza os dias do calendário no modal de reagendamento.
+     * Desabilita dias passados, dias em que o barbeiro não trabalha e feriados.
+     * Ao clicar em um dia válido, carrega os horários disponíveis.
+     */
     function renderRescheduleCalendar() {
         var year = _rescheduleState.calendarDate.getFullYear();
         var month = _rescheduleState.calendarDate.getMonth();
@@ -753,6 +1042,15 @@
         });
     }
 
+    /**
+     * Renderiza os horários disponíveis para reagendamento no dia selecionado.
+     * Considera:
+     *   - Horário de trabalho do barbeiro (barber_schedules)
+     *   - Duração do serviço (para evitar sobreposição)
+     *   - Horários já agendados (bookedSlots)
+     *   - Horários passados (se a data for hoje)
+     * Intervalo entre slots: 30 minutos.
+     */
     async function renderRescheduleTimeSlots() {
         if (!_rescheduleState.selectedDate) {
             $('reschedule-time-section').style.display = 'none';
@@ -841,6 +1139,14 @@
         }, 100);
     }
 
+    /**
+     * Busca os horários já agendados para um barbeiro em uma data específica.
+     * Tenta primeiro usar a RPC 'get_public_booked_slots' (mais eficiente).
+     * Se a RPC não existir, faz fallback consultando a tabela 'appointments'.
+     * @param {string} barberId - UUID do barbeiro.
+     * @param {string} date - Data no formato "YYYY-MM-DD".
+     * @returns {Promise<Array>} Lista de agendamentos com appointment_time e total_duration.
+     */
     async function getBookedSlotsForReschedule(barberId, date) {
         try {
             var rpcResult = await sb.rpc('get_public_booked_slots', {
@@ -862,6 +1168,11 @@
         }
     }
 
+    /**
+     * Confirma o reagendamento, atualizando data e hora no banco.
+     * Após o sucesso, exibe uma tela de confirmação com link para notificar
+     * o cliente via WhatsApp com os detalhes da mudança.
+     */
     async function confirmReschedule() {
         if (!_rescheduleState.selectedDate || !_rescheduleState.selectedTime) {
             toast('Selecione a nova data e horário.', 'error');
@@ -921,6 +1232,12 @@
         }
     }
 
+    /**
+     * Gera um link de WhatsApp com mensagem de notificação de reagendamento.
+     * Mostra a data/hora anterior e a nova data/hora.
+     * @param {Object} appointment - Dados do agendamento original.
+     * @returns {string} URL completa do WhatsApp com mensagem formatada.
+     */
     function getWhatsAppRescheduleLink(appointment) {
         var clean = appointment.client_phone.replace(/\D/g, '');
         if (!clean.startsWith('55')) clean = '55' + clean;
@@ -938,6 +1255,10 @@
         return 'https://wa.me/' + clean + '?text=' + encodeURIComponent(text);
     }
 
+    /**
+     * Fecha o modal de reagendamento e reseta o estado de reagendamento.
+     * Limpa todos os dados temporários (agendamento, calendário, horários).
+     */
     function closeReschedule() {
         $('reschedule-overlay').style.display = 'none';
         _rescheduleState = {
@@ -950,6 +1271,11 @@
         };
     }
 
+    /**
+     * Confirma o cancelamento de um agendamento, alterando status para 'cancelled'.
+     * Chamado após o admin notificar o cliente via WhatsApp.
+     * @param {string} id - UUID do agendamento.
+     */
     async function confirmCancel(id) {
         try {
             var result = await sb.from('appointments').update({ status: 'cancelled' }).eq('id', id);
@@ -967,6 +1293,12 @@
         }
     }
 
+    /**
+     * Remove permanentemente um agendamento do banco de dados (hard delete).
+     * Usado para limpar o histórico de agendamentos cancelados/concluídos.
+     * Exige confirmação prévia do usuário.
+     * @param {string} id - UUID do agendamento.
+     */
     async function deleteAppointment(id) {
         closeAppointmentDetails();
         showConfirm('Remover Agendamento', 'Tem certeza que deseja remover este agendamento do histórico? Esta ação não pode ser desfeita.', async function () {
@@ -986,10 +1318,24 @@
         });
     }
 
-    // ========== BARBERS CRUD ==========
+    // ══════════════════════════════════════════════════════════════════════════
+    // ═─ BARBEIROS (CRUD) ══════════════════════════════════════════════════════
+    // ══════════════════════════════════════════════════════════════════════════
+    // CRUD completo de barbeiros:
+    //   - Listagem com foto, telefone, horários de trabalho, badge Telegram
+    //   - Criar/Editar com formulário de horários por dia da semana
+    //   - Upload de foto de perfil (Supabase Storage)
+    //   - Ativar/Desativar/Excluir
+    //   - Gerenciamento de horários na tabela barber_schedules
+    // ══════════════════════════════════════════════════════════════════════════
 
+    /** Cache local dos horários de trabalho de cada barbeiro, indexado por barber_id. */
     var _barberSchedules = {};
 
+    /**
+     * Estado temporário do fluxo de reagendamento. Mantém dados do agendamento
+     * original, calendário, seleções do usuário, horários do barbeiro e feriados.
+     */
     var _rescheduleState = {
         appointment: null,
         calendarDate: new Date(),
@@ -999,6 +1345,11 @@
         holidays: []
     };
 
+    /**
+     * Carrega a lista de barbeiros e seus horários do banco.
+     * Atualiza o cache local (_barberSchedules), renderiza os cards de barbeiros
+     * e popula os dropdowns de filtro (na listagem de agendamentos e no dashboard).
+     */
     async function loadBarbers() {
         try {
             var result = await sb.from('barbers').select('*').order('sort_order').order('name');
@@ -1035,6 +1386,13 @@
         }
     }
 
+    /**
+     * Gera um resumo textual dos horários de trabalho de um barbeiro.
+     * Agrupa dias consecutivos com o mesmo horário em intervalos.
+     * Ex: "Seg-Sex 09:00-19:00, Sáb 09:00-17:00"
+     * @param {string} barberId - ID do barbeiro.
+     * @returns {string} Resumo formatado ou "Sem horário configurado".
+     */
     function getBarberScheduleSummary(barberId) {
         var scheds = _barberSchedules[barberId] || [];
         if (!scheds.length) return 'Sem horário configurado';
@@ -1059,6 +1417,12 @@
         return groups.join(', ');
     }
 
+    /**
+     * Renderiza os cards de barbeiros na seção de gerenciamento.
+     * Cada card mostra: foto, nome, telefone, horários, badges (ativo/inativo,
+     * Telegram) e botões de ação (Editar, Ativar/Desativar, Excluir).
+     * @param {Array} barbers - Lista de barbeiros.
+     */
     function renderBarbers(barbers) {
         var container = $('barbers-list');
         if (!barbers.length) {
@@ -1092,6 +1456,19 @@
         }).join('');
     }
 
+    /**
+     * Exibe o formulário de criação/edição de barbeiro em um modal.
+     * O formulário inclui: nome, telefone, Telegram Chat ID, foto de perfil
+     * (com upload e preview) e grade de horários por dia da semana.
+     *
+     * Lógica de salvamento:
+     *   - Se edição: faz UPDATE na tabela 'barbers', DELETE+INSERT nas schedules
+     *   - Se criação: faz INSERT na tabela 'barbers' (com sort_order auto), INSERT nas schedules
+     *   - Upload de foto: usa Supabase Storage (bucket 'barber-photos')
+     *
+     * @param {Object|null} barber - Dados do barbeiro (null para novo).
+     * @param {Array} [schedules] - Horários existentes do barbeiro.
+     */
     function showBarberForm(barber, schedules) {
         var isEdit = !!barber;
         var title = isEdit ? 'Editar Barbeiro' : 'Novo Barbeiro';
@@ -1288,6 +1665,10 @@
           });
     }
 
+    /**
+     * Carrega dados de um barbeiro e abre o formulário de edição.
+     * @param {string} id - UUID do barbeiro.
+     */
     async function editBarber(id) {
         var result = await sb.from('barbers').select('*').eq('id', id).single();
         if (result.data) {
@@ -1296,6 +1677,11 @@
         }
     }
 
+    /**
+     * Ativa ou desativa um barbeiro (toggle do campo 'active').
+     * @param {string} id - UUID do barbeiro.
+     * @param {boolean} active - Novo estado (true=ativo, false=inativo).
+     */
     async function toggleBarber(id, active) {
         var result = await sb.from('barbers').update({ active: active }).eq('id', id);
         if (result.error) {
@@ -1307,6 +1693,12 @@
         }
     }
 
+    /**
+     * Exclui um barbeiro permanentemente (com confirmação prévia).
+     * NOTA: Agendamentos vinculados podem ser afetados dependendo das
+     * constraints do banco (ON DELETE CASCADE ou SET NULL).
+     * @param {string} id - UUID do barbeiro.
+     */
     function deleteBarber(id) {
         showConfirm('Excluir Barbeiro', 'Tem certeza? Todos os agendamentos deste barbeiro tambem serao excluidos.', async function () {
             var result = await sb.from('barbers').delete().eq('id', id);
@@ -1320,8 +1712,19 @@
         });
     }
 
-    // ========== SERVICES CRUD ==========
+    // ══════════════════════════════════════════════════════════════════════════
+    // ═─ SERVIÇOS (CRUD) ══════════════════════════════════════════════════════
+    // ══════════════════════════════════════════════════════════════════════════
+    // CRUD completo de serviços da barbearia:
+    //   - Listagem com nome, preço, duração, badge "MAIS PEDIDO"
+    //   - Criar/Editar com formulário (nome, preço, duração, destaque)
+    //   - Ativar/Desativar/Excluir
+    //   - Ordenação por sort_order
+    // ══════════════════════════════════════════════════════════════════════════
 
+    /**
+     * Carrega a lista de serviços do banco e renderiza os cards.
+     */
     async function loadServices() {
         try {
             var result = await sb.from('services').select('*').order('sort_order').order('name');
@@ -1331,6 +1734,12 @@
         }
     }
 
+    /**
+     * Renderiza os cards de serviços na seção de gerenciamento.
+     * Cada card mostra: nome, preço, duração formatada, badges (ativo/inativo,
+     * "MAIS PEDIDO") e botões de ação.
+     * @param {Array} services - Lista de serviços.
+     */
     function renderServices(services) {
         var container = $('services-list');
         if (!services.length) {
@@ -1364,6 +1773,12 @@
         }).join('');
     }
 
+    /**
+     * Exibe o formulário de criação/edição de serviço em um modal.
+     * Inclui campos: nome, preço (R$), duração (minutos) e checkbox "MAIS PEDIDO".
+     * Ao criar, define sort_order automaticamente e active=true.
+     * @param {Object|null} service - Dados do serviço (null para novo).
+     */
     function showServiceForm(service) {
         var isEdit = !!service;
         var title = isEdit ? 'Editar Serviço' : 'Novo Serviço';
@@ -1410,11 +1825,20 @@
         });
     }
 
+    /**
+     * Carrega dados de um serviço e abre o formulário de edição.
+     * @param {string} id - UUID do serviço.
+     */
     async function editService(id) {
         var result = await sb.from('services').select('*').eq('id', id).single();
         if (result.data) showServiceForm(result.data);
     }
 
+    /**
+     * Ativa ou desativa um serviço (toggle do campo 'active').
+     * @param {string} id - UUID do serviço.
+     * @param {boolean} active - Novo estado.
+     */
     async function toggleService(id, active) {
         var result = await sb.from('services').update({ active: active }).eq('id', id);
         if (result.error) {
@@ -1425,6 +1849,10 @@
         }
     }
 
+    /**
+     * Exclui um serviço permanentemente (com confirmação prévia).
+     * @param {string} id - UUID do serviço.
+     */
     function deleteService(id) {
         showConfirm('Excluir Serviço', 'Tem certeza que deseja excluir este serviço?', async function () {
             var result = await sb.from('services').delete().eq('id', id);
@@ -1437,8 +1865,19 @@
         });
     }
 
-    // ========== PRODUCTS CRUD (produtos da lojinha) ==========
+    // ══════════════════════════════════════════════════════════════════════════
+    // ═─ PRODUTOS DA LOJINHA (CRUD) ════════════════════════════════════════════
+    // ══════════════════════════════════════════════════════════════════════════
+    // CRUD completo de produtos da lojinha:
+    //   - Listagem com foto, nome, descrição, preço, controle de estoque
+    //   - Criar/Editar com upload de foto (Supabase Storage)
+    //   - Ativar/Desativar/Excluir
+    //   - Badges de estoque: esgotado (vermelho), baixo (amarelo), ok (verde)
+    // ══════════════════════════════════════════════════════════════════════════
 
+    /**
+     * Carrega a lista de produtos do banco e renderiza os cards.
+     */
     async function loadProducts() {
         try {
             var result = await sb.from('products').select('*').order('sort_order').order('name');
@@ -1448,6 +1887,12 @@
         }
     }
 
+    /**
+     * Renderiza os cards de produtos na seção de gerenciamento.
+     * Cada card mostra: foto, nome, descrição, preço, status de estoque
+     * (esgotado/baixo/ok) e botões de ação.
+     * @param {Array} products - Lista de produtos.
+     */
     function renderProducts(products) {
         var container = $('products-list');
         if (!products.length) {
@@ -1478,6 +1923,13 @@
         }).join('');
     }
 
+    /**
+     * Exibe o formulário de criação/edição de produto em um modal.
+     * Inclui campos: nome, descrição, preço, estoque e upload de foto.
+     * Upload de foto usa Supabase Storage (bucket 'product-photos').
+     * Ao criar, define sort_order automaticamente e active=true.
+     * @param {Object|null} product - Dados do produto (null para novo).
+     */
     function showProductForm(product) {
         var isEdit = !!product;
         var title = isEdit ? 'Editar Produto' : 'Novo Produto';
@@ -1597,11 +2049,20 @@
         });
     }
 
+    /**
+     * Carrega dados de um produto e abre o formulário de edição.
+     * @param {string} id - UUID do produto.
+     */
     async function editProduct(id) {
         var result = await sb.from('products').select('*').eq('id', id).single();
         if (result.data) showProductForm(result.data);
     }
 
+    /**
+     * Ativa ou desativa um produto (toggle do campo 'active').
+     * @param {string} id - UUID do produto.
+     * @param {boolean} active - Novo estado.
+     */
     async function toggleProduct(id, active) {
         var result = await sb.from('products').update({ active: active }).eq('id', id);
         if (result.error) {
@@ -1612,6 +2073,10 @@
         }
     }
 
+    /**
+     * Exclui um produto permanentemente (com confirmação prévia).
+     * @param {string} id - UUID do produto.
+     */
     function deleteProduct(id) {
         showConfirm('Excluir Produto', 'Tem certeza que deseja excluir este produto?', async function () {
             var result = await sb.from('products').delete().eq('id', id);
@@ -1624,8 +2089,18 @@
         });
     }
 
-    // ========== PRODUCT ORDERS (pedidos/reservas de produtos) ==========
+    // ══════════════════════════════════════════════════════════════════════════
+    // ═─ PEDIDOS DE PRODUTOS (Reservas) ═══════════════════════════════════════
+    // ══════════════════════════════════════════════════════════════════════════
+    // Gerencia os pedidos/reservas de produtos feitos pelos clientes:
+    //   - Listagem com filtro por status (reserved, picked_up, cancelled)
+    //   - Ações: marcar como retirado, cancelar, excluir
+    //   - Link WhatsApp para contato com o cliente
+    // ══════════════════════════════════════════════════════════════════════════
 
+    /**
+     * Carrega a lista de pedidos de produtos com filtro por status.
+     */
     async function loadProductOrders() {
         try {
             var query = sb.from('product_orders').select('*').order('created_at', { ascending: false });
@@ -1638,6 +2113,13 @@
         }
     }
 
+    /**
+     * Renderiza os cards de pedidos de produtos.
+     * Cada card mostra: nome e telefone do cliente, itens com quantidades,
+     * preço total, data/hora, status e botões de ação (retirado, cancelar,
+     * excluir, WhatsApp).
+     * @param {Array} orders - Lista de pedidos.
+     */
     function renderProductOrders(orders) {
         var container = $('product-orders-list');
         if (!orders.length) {
@@ -1690,6 +2172,10 @@
         }).join('');
     }
 
+    /**
+     * Marca um pedido de produto como 'picked_up' (retirado pelo cliente).
+     * @param {string} id - UUID do pedido.
+     */
     async function markOrderPickedUp(id) {
         var result = await sb.from('product_orders').update({ status: 'picked_up' }).eq('id', id);
         if (result.error) {
@@ -1700,6 +2186,10 @@
         }
     }
 
+    /**
+     * Cancela um pedido de produto (status → 'cancelled'), com confirmação prévia.
+     * @param {string} id - UUID do pedido.
+     */
     async function cancelOrder(id) {
         showConfirm('Cancelar Pedido', 'Tem certeza que deseja cancelar este pedido?', async function () {
             var result = await sb.from('product_orders').update({ status: 'cancelled' }).eq('id', id);
@@ -1712,6 +2202,11 @@
         });
     }
 
+    /**
+     * Remove permanentemente um pedido de produto (hard delete).
+     * Exige confirmação prévia do usuário.
+     * @param {string} id - UUID do pedido.
+     */
     function deleteOrder(id) {
         showConfirm('Excluir Pedido', 'Tem certeza que deseja excluir este pedido permanentemente? Esta ação não pode ser desfeita.', async function () {
             var result = await sb.from('product_orders').delete().eq('id', id);
@@ -1724,8 +2219,22 @@
         });
     }
 
-    // ========== ADMINS ==========
+    // ══════════════════════════════════════════════════════════════════════════
+    // ═─ GERENCIAMENTO DE USUÁRIOS (Admins/Barbeiros) ═════════════════════════
+    // ══════════════════════════════════════════════════════════════════════════
+    // Gerencia os usuários com acesso ao painel administrativo:
+    //   - Listagem de admins com papel (role) e barbeiro vinculado
+    //   - Criar novo usuário (Supabase Auth signUp + registro na tabela admins)
+    //   - Editar papel (admin ↔ barbeiro) e barbeiro vinculado
+    //   - Resetar senha (envia email via Supabase Auth)
+    //   - Remover acesso (remove da tabela admins, mantém no Auth)
+    // ══════════════════════════════════════════════════════════════════════════
 
+    /**
+     * Carrega e renderiza a lista de usuários administradores/barbeiros.
+     * Mostra email, papel (admin/barbeiro), barbeiro vinculado (se aplicável)
+     * e botões de ação. O usuário atual é marcado com "(você)".
+     */
     async function loadAdmins() {
         try {
             // Carregar barbeiros para o dropdown
@@ -1781,6 +2290,11 @@
         }
     }
 
+    /**
+     * Exibe o formulário para adicionar um novo usuário ao painel.
+     * Inclui: email, senha, papel (admin/barbeiro) e barbeiro vinculado.
+     * O campo de barbeiro aparece apenas quando o papel é 'barber'.
+     */
     function showAddAdminForm() {
         var html =
             '<div class="form-group">' +
@@ -1826,6 +2340,11 @@
         });
     }
 
+    /**
+     * Popula um dropdown de seleção de barbeiros com dados do banco.
+     * Usado nos formulários de criação e edição de admins.
+     * @param {string} selectId - ID do elemento <select> a popular.
+     */
     async function loadBarbersForSelect(selectId) {
         try {
             var result = await sb.from('barbers').select('id, name').order('sort_order');
@@ -1839,6 +2358,12 @@
         } catch (err) {}
     }
 
+    /**
+     * Cria um novo usuário no sistema:
+     *   1. Registra no Supabase Auth (signUp com email + senha)
+     *   2. Insere na tabela 'admins' com papel e barbeiro vinculado
+     * Trata erros comuns (email já cadastrado, senha curta, etc.).
+     */
     async function addNewAdmin() {
         var email = $('admin-new-email').value.trim();
         var password = $('admin-new-password').value;
@@ -1897,6 +2422,11 @@
         }
     }
 
+    /**
+     * Abre o formulário para editar o papel de um usuário existente.
+     * Permite alterar entre 'admin' e 'barbeiro' e selecionar o barbeiro vinculado.
+     * @param {string} userId - UUID do usuário (auth.users.id).
+     */
     async function editAdminRole(userId) {
         try {
             // Buscar dados atuais do admin
@@ -1958,6 +2488,13 @@
         }
     }
 
+    /**
+     * Remove um usuário da tabela 'admins', revogando seu acesso ao painel.
+     * O usuário continua existindo no Supabase Auth, mas não poderá mais
+     * fazer login no painel.
+     * @param {string} userId - UUID do usuário.
+     * @param {string} email - Email do usuário (para exibição na confirmação).
+     */
     function removeAdmin(userId, email) {
         showConfirm('Remover Administrador', 'Tem certeza que deseja remover ' + email + '? O usuário continuará existindo no Supabase Auth mas perderá acesso ao painel.', async function () {
             try {
@@ -1974,6 +2511,11 @@
         });
     }
 
+    /**
+     * Envia um email de redefinição de senha para um usuário via Supabase Auth.
+     * O link de redefinição redireciona para a página admin.html.
+     * @param {string} email - Email do usuário.
+     */
     function resetAdminPassword(email) {
         showConfirm('Resetar Senha', 'Enviar email de redefinição de senha para ' + email + '?', async function () {
             try {
@@ -1991,16 +2533,54 @@
         });
     }
 
-    // ========== NOTIFICATIONS ==========
+    // ══════════════════════════════════════════════════════════════════════════
+    // ═─ NOTIFICAÇÕES EM TEMPO REAL ═══════════════════════════════════════════
+    // ══════════════════════════════════════════════════════════════════════════
+    // Sistema de notificação de novos agendamentos com múltiplos canais:
+    //
+    //   1. Polling (fallback garantido):
+    //      - A cada 15 segundos, consulta agendamentos do dia
+    //      - Compara com IDs já conhecidos para detectar novos
+    //
+    //   2. Supabase Realtime (tempo real, quando disponível):
+    //      - Inscreve-se em INSERT/UPDATE/DELETE na tabela 'appointments'
+    //      - Se falhar, o polling continua funcionando normalmente
+    //
+    //   3. Notificações do navegador (Browser Notification API):
+    //      - Solicita permissão ao abrir o painel
+    //      - Exibe popup com ícone e som de notificação
+    //
+    //   4. Telegram Bot (opcional):
+    //      - Envia mensagem HTML para o chat do barbeiro via Telegram API
+    //      - Requer TELEGRAM_BOT_TOKEN configurado em supabase-config.js
+    //
+    //   5. Badge de notificação:
+    //      - Contador de agendamentos não vistos no ícone do sino
+    //      - Painel dropdown com lista de agendamentos do dia
+    // ══════════════════════════════════════════════════════════════════════════
 
+    /** Mapa de IDs de agendamentos já conhecidos (evita notificar o mesmo agendamento duas vezes). */
     var _knownAppointmentIds = {};
+    /** Mapa de IDs de agendamentos já vistos pelo usuário (controla o badge de notificação). */
     var _seenAppointmentIds = {};
+    /** Contexto de áudio para o som de notificação (criado sob demanda). */
     var _audioCtx = null;
+    /** Canal de inscrição Realtime (para limpeza no logout). */
     var _realtimeSubscription = null;
+    /** Referência do intervalo de polling (para limpeza no logout). */
     var _pollingInterval = null;
+    /** Última contagem de agendamentos conhecida (para detectar novos via polling). */
     var _lastPolledCount = -1;
+    /** Cache de dados de barbeiros para envio de notificações Telegram. */
     var _barberCache = {};
 
+    /**
+     * Envia uma notificação via Telegram Bot API para o barbeiro.
+     * Requer que o barbeiro tenha telegram_chat_id configurado e que
+     * TELEGRAM_BOT_TOKEN esteja definido em supabase-config.js.
+     * @param {string} barberId - UUID do barbeiro.
+     * @param {string} message - Mensagem HTML a enviar.
+     */
     function sendTelegramNotification(barberId, message) {
         if (!TELEGRAM_BOT_TOKEN) return;
         var barber = _barberCache[barberId];
@@ -2018,6 +2598,10 @@
         });
     }
 
+    /**
+     * Carrega dados dos barbeiros para o cache de notificações Telegram.
+     * Executado uma vez ao iniciar o sistema de notificações.
+     */
     function cacheBarbersForNotifications() {
         sb.from('barbers').select('id, name, telegram_chat_id').then(function (result) {
             _barberCache = {};
@@ -2025,6 +2609,11 @@
         });
     }
 
+    /**
+     * Reproduz um som de notificação usando Web Audio API.
+     * Toca uma sequência de notas musicais (880Hz → 1100Hz → 1320Hz) para
+     * alertar sobre novos agendamentos. Seguro contra erros (try/catch).
+     */
     function playNotificationSound() {
         try {
             if (!_audioCtx) _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -2052,6 +2641,10 @@
         } catch (e) {}
     }
 
+    /**
+     * Solicita permissão do usuário para notificações do navegador.
+     * Chamada ao abrir o painel. Só solicita se ainda não foi decidido.
+     */
     function requestBrowserNotificationPermission() {
         if (!('Notification' in window)) return;
         if (Notification.permission === 'default') {
@@ -2059,6 +2652,13 @@
         }
     }
 
+    /**
+     * Exibe uma notificação nativa do navegador (Browser Notification API).
+     * Clicar na notificação traz a janela para frente e navega ao dashboard.
+     * A notificação se fecha automaticamente após 8 segundos.
+     * @param {string} title - Título da notificação.
+     * @param {string} body - Corpo da mensagem.
+     */
     function showBrowserNotification(title, body) {
         if (!('Notification' in window) || Notification.permission !== 'granted') return;
         try {
@@ -2077,6 +2677,17 @@
         } catch (e) {}
     }
 
+    /**
+     * Atualiza o badge de notificação e detecta novos agendamentos.
+     * Compara a lista atual de agendamentos com os IDs já conhecidos.
+     * Se houver novos agendamentos (e não for a primeira carga):
+     *   - Exibe notificação do navegador
+     *   - Reproduz som de alerta
+     *   - Mostra toast
+     *   - Envia notificação Telegram para o barbeiro
+     *   - Recarrega dashboard e listagem
+     * Também atualiza o badge com número de agendamentos não vistos.
+     */
     function updateNotificationBadge() {
         var today = todayStr();
         var query = sb.from('appointments').select('id, appointment_time, client_name, status, barber:barbers(name), service_names').eq('appointment_date', today).neq('status', 'cancelled').order('appointment_time');
@@ -2138,6 +2749,11 @@
         });
     }
 
+    /**
+     * Renderiza o painel dropdown de notificações com a lista de agendamentos do dia.
+     * Agendamentos passados são exibidos com estilo atenuado ('past').
+     * @param {Array} appointments - Lista de agendamentos do dia.
+     */
     function renderNotificationPanel(appointments) {
         var panelDate = $('notification-panel-date');
         var panelList = $('notification-panel-list');
@@ -2172,6 +2788,11 @@
         }).join('');
     }
 
+    /**
+     * Alterna a visibilidade do painel de notificações (dropdown).
+     * Ao abrir, marca todos os agendamentos como vistos e esconde o badge.
+     * Ao fechar, apenas esconde o painel.
+     */
     function toggleNotificationPanel() {
         var panel = $('notification-panel');
         var isVisible = panel.style.display !== 'none';
@@ -2192,6 +2813,13 @@
         }
     }
 
+    /**
+     * Inicializa o sistema de notificações:
+     *   1. Carrega agendamentos atuais (para não notificar os existentes)
+     *   2. Inicia o polling (a cada 15 segundos)
+     *   3. Tenta inscrição Realtime (fallback: polling funciona normalmente)
+     *   4. Carrega cache de barbeiros para notificações Telegram
+     */
     function startNotifications() {
         var today = todayStr();
         var query = sb.from('appointments').select('id').eq('appointment_date', today).neq('status', 'cancelled');
@@ -2211,6 +2839,10 @@
         });
     }
 
+    /**
+     * Inicia o intervalo de polling para verificar novos agendamentos.
+     * Executa updateNotificationBadge() a cada 15 segundos.
+     */
     function startPolling() {
         if (_pollingInterval) clearInterval(_pollingInterval);
         _pollingInterval = setInterval(function () {
@@ -2218,6 +2850,11 @@
         }, 15000);
     }
 
+    /**
+     * Tenta criar uma inscrição Realtime no canal 'admin-appointments'.
+     * Escuta eventos INSERT, UPDATE e DELETE na tabela 'appointments'.
+     * Se falhar (CHANNEL_ERROR/TIMED_OUT), o polling continua como fallback.
+     */
     function tryRealtimeSubscription() {
         try {
             var channel = sb
@@ -2247,8 +2884,30 @@
         }
     }
 
-    // ========== EVENT LISTENERS ==========
+    // ══════════════════════════════════════════════════════════════════════════
+    // ═─ EVENT LISTENERS & INICIALIZAÇÃO ══════════════════════════════════════
+    // ══════════════════════════════════════════════════════════════════════════
+    // A função init() é chamada quando o DOM está pronto (DOMContentLoaded ou
+    // imediatamente se já carregado). Registra todos os event listeners:
+    //   - Formulário de login e botão de logout
+    //   - Toggle de visibilidade da senha
+    //   - Navegação por abas
+    //   - Modais (fechar, cancelar, clique fora)
+    //   - Botões de adicionar (barbeiro, serviço, produto, admin)
+    //   - Filtros de agendamentos e pedidos
+    //   - Painel de notificações
+    //
+    // Após registrar os listeners, chama checkSession() para verificar se
+    // existe uma sessão ativa (auto-login).
+    //
+    // O objeto AdminApp é exposto em window para que funções possam ser
+    // chamadas de atributos onclick nos templates HTML gerados dinamicamente.
+    // ══════════════════════════════════════════════════════════════════════════
 
+    /**
+     * Inicializa o painel administrativo: registra todos os event listeners
+     * e verifica se há sessão ativa para auto-login.
+     */
     function init() {
         $('login-form').addEventListener('submit', handleLogin);
         $('btn-logout').addEventListener('click', handleLogout);
@@ -2335,6 +2994,10 @@
         checkSession();
     }
 
+    // ── API Pública ──────────────────────────────────────────────────────────
+    // Objeto exposto em window.AdminApp para callbacks inline nos templates HTML.
+    // As funções são referenciadas em atributos onclick dos cards e modais gerados
+    // dinamicamente (ex: onclick="AdminApp.editBarber('...')").
     window.AdminApp = {
         showAppointmentDetails: showAppointmentDetails,
         closeAppointmentDetails: closeAppointmentDetails,
@@ -2364,6 +3027,10 @@
         goToPage: function (p) { loadAppointments(p); }
     };
 
+    // ── Bootstrap ────────────────────────────────────────────────────────────
+    // Garante que init() seja chamado assim que o DOM estiver pronto.
+    // Se o DOM ainda estiver carregando, aguarda DOMContentLoaded.
+    // Caso contrário (script carregado deferidamente), executa imediatamente.
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', init);
     } else {

@@ -6,7 +6,7 @@
 # Uso: bash scripts/configurar_webhook.sh
 
 BOT_TOKEN="8932305524:AAE4CBvVQb-lMG4lnE57WVRKr7Pdwteewds"
-WEBHOOK_URL="https://pereira-barbershop.vercel.app/api/telegram"
+WEBHOOK_URL="https://www.pereira-barbershop.com.br/api/telegram"
 
 echo "=" | tr '=' '-'
 echo "🔗 Configurando Webhook do Telegram"

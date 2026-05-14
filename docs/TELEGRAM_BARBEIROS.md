@@ -61,7 +61,7 @@ Depois que o Gabriel configurar, quando um cliente agendar pelo site, você rece
 ## Testar
 
 Depois de configurado, faça um agendamento de teste aqui:
-https://pereira-barbershop.vercel.app/agendar.html
+https://www.pereira-barbershop.com.br/agendar.html
 
 A notificação chega em **menos de 1 segundo**! ⚡
 

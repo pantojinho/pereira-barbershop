@@ -1,41 +1,68 @@
+/**
+ * agendar.js — Página de Agendamento Online
+ * Pereira's Barber Shop
+ *
+ * Fluxo de 4 etapas: Barbeiro → Serviços → Data/Horário → Dados do Cliente
+ *
+ * Supabase RPCs utilizadas:
+ *   - get_public_barbers        → lista barbeiros ativos
+ *   - get_public_services       → lista serviços disponíveis
+ *   - get_public_booked_slots   → verifica horários já ocupados
+ *   - create_public_appointment → cria o agendamento
+ *
+ * Após confirmação, notifica o barbeiro via Telegram (POST /api/telegram).
+ * Timezone: America/Sao_Paulo (GMT-3).
+ */
 (function () {
     'use strict';
 
+    // ── Cliente Supabase (anon key, seguro client-side) ──
     var sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+    // ── Estado do wizard ──
     var currentStep = 1;
     var totalSteps = 4;
 
+    /** Dados do agendamento sendo construído pelo wizard */
     var booking = {
-        barber: null,
-        barberName: null,
-        barberId: null,
-        date: null,
-        dateFormatted: null,
-        time: null,
-        services: [],
-        totalPrice: 0,
-        totalDuration: 0,
+        barber: null,        // nome do barbeiro
+        barberName: null,    // nome de exibição
+        barberId: null,      // UUID no Supabase
+        date: null,          // YYYY-MM-DD
+        dateFormatted: null, // exibição
+        time: null,          // HH:MM
+        services: [],        // serviços selecionados
+        totalPrice: 0,       // R$ total
+        totalDuration: 0,    // minutos
         clientName: null,
         clientPhone: null,
         obs: null
     };
 
+    // ── Calendário ──
     var calendarDate = new Date();
     var selectedDate = null;
-    var BARBERS = {};
-    var SERVICES_DB = [];
-    var SLOT_INTERVAL = 30;
 
+    // ── Cache ──
+    var BARBERS = {};         // nome → dados do barbeiro
+    var SERVICES_DB = [];     // todos os serviços
+    var SLOT_INTERVAL = 30;  // minutos entre slots
+
+    // ── Helpers DOM ──
     function $(id) { return document.getElementById(id); }
     function $$(sel) { return document.querySelectorAll(sel); }
 
+    /** Escapa HTML para prevenir XSS */
     function escapeHTML(value) {
         return String(value == null ? '' : value).replace(/[&<>"']/g, function (ch) {
             return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch];
         });
     }
 
+    /**
+     * Inicializa a página. Suporta pré-seleção via URL:
+     *   ?barber=Nome&service=Serviço
+     */
     async function init() {
         var urlParams = new URLSearchParams(window.location.search);
         var preselectedBarber = urlParams.get('barber');
@@ -48,6 +75,11 @@
         updateNavButtons();
     }
 
+    /**
+     * Carrega barbeiros ativos e seus horários de trabalho.
+     * Popula o cache BARBERS e renderiza a lista de seleção.
+     * @param {string|null} preselectedBarber - Nome pré-selecionado via URL param
+     */
     async function loadBarbers(preselectedBarber) {
         try {
             var result = await sb.from('barbers').select('*').eq('active', true).order('sort_order');
@@ -102,6 +134,11 @@
         }
     }
 
+    /**
+     * Carrega serviços ativos do catálogo.
+     * Popula SERVICES_DB e renderiza a lista de seleção.
+     * @param {string|null} preselectedService - Nome pré-selecionado via URL param
+     */
     async function loadServices(preselectedService) {
         try {
             var result = await sb.from('services').select('*').eq('active', true).order('sort_order');
@@ -138,6 +175,7 @@
         }
     }
 
+    /** Configura listeners de seleção de barbeiro */
     function setupBarbers(preselectedBarber) {
         var options = $$(".barber-option");
         options.forEach(function (opt) {
@@ -164,6 +202,7 @@
         }
     }
 
+    /** Inicializa o calendário com navegação de meses */
     function setupCalendar() {
         renderCalendar();
 
@@ -178,6 +217,7 @@
         });
     }
 
+    /** Renderiza o grid de dias do calendário para o mês atual */
     function renderCalendar() {
         var year = calendarDate.getFullYear();
         var month = calendarDate.getMonth();
@@ -232,6 +272,7 @@
         });
     }
 
+    /** Formata data YYYY-MM-DD para exibição legível (dd/mm/aaaa) */
     function formatDate(dateStr) {
         var parts = dateStr.split("-");
         var d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
@@ -240,6 +281,13 @@
         return days[d.getDay()] + ", " + d.getDate() + " " + months[d.getMonth()] + " " + d.getFullYear();
     }
 
+    /**
+     * Busca horários já agendados para um barbeiro numa data específica.
+     * Usa RPC get_public_booked_slots (SECURITY DEFINER bypassa RLS).
+     * @param {string} barberId - UUID do barbeiro
+     * @param {string} date - Data YYYY-MM-DD
+     * @returns {Array} Lista de slots ocupados com appointment_time e total_duration
+     */
     async function getBookedSlots(barberId, date) {
         try {
             var rpcResult = await sb.rpc('get_public_booked_slots', {
@@ -266,6 +314,11 @@
         }
     }
 
+    /**
+     * Renderiza os horários disponíveis para a data selecionada.
+     * Considera horário de funcionamento do barbeiro, slots já ocupados e duração dos serviços.
+     * Desabilita slots com conflito de horário.
+     */
     async function renderTimeSlots() {
         if (!selectedDate || !booking.barber) {
             $("time-slots").innerHTML = "";
@@ -359,6 +412,7 @@
         });
     }
 
+    /** Configura listeners de seleção de serviços (múltipla escolha) */
     function setupServices(preselectedService) {
         var options = $$(".service-option");
         options.forEach(function (opt) {
@@ -382,6 +436,7 @@
         }
     }
 
+    /** Atualiza o resumo de serviços selecionados (preço e duração total) */
     function updateServiceSummary() {
         var selected = $$(".service-option.selected");
         booking.services = [];
@@ -405,6 +460,7 @@
         $("total-duration").textContent = hours > 0 ? hours + "h" + (mins > 0 ? mins + "min" : "") : mins + " min";
     }
 
+    /** Configura botões de navegação do wizard (voltar/avançar) */
     function setupNav() {
         $("btn-back").addEventListener("click", function () {
             if (currentStep > 1) {
@@ -493,6 +549,7 @@
         return true;
     }
 
+    /** Animação de "shake" em elementos com erro de validação */
     function shakeElement(el) {
         el.style.animation = "none";
         el.offsetHeight;
@@ -500,6 +557,7 @@
         setTimeout(function () { el.style.animation = ""; }, 500);
     }
 
+    /** Atualiza estado dos botões voltar/avançar baseado no step atual */
     function updateNavButtons() {
         $("btn-back").style.visibility = currentStep === 1 ? "hidden" : "visible";
 
@@ -518,6 +576,7 @@
         $("btn-next").disabled = !canNext;
     }
 
+    /** Preenche o painel de resumo final com todos os dados do agendamento */
     function populateSummary() {
         $("sum-barber").textContent = booking.barberName;
         $("sum-date").textContent = booking.dateFormatted;
@@ -534,6 +593,11 @@
         }
     }
 
+    /**
+     * Cria o agendamento no Supabase via RPC create_public_appointment.
+     * Valida horário disponível no servidor (evita conflitos de corrida).
+     * @param {Array} serviceIds - IDs dos serviços selecionados
+     */
     async function createBooking(serviceIds) {
         var rpcResult = await sb.rpc('create_public_appointment', {
             p_barber_id: booking.barberId,
@@ -567,6 +631,9 @@
         });
     }
 
+    /**
+     * Submete o agendamento completo: valida → cria no Supabase → mostra confirmação → notifica Telegram
+     */
     async function submitBooking() {
         if (!validateStep(4)) return;
 
@@ -626,6 +693,10 @@
     }
 
     // Função para enviar notificação via Telegram para o barbeiro
+    /**
+     * Envia notificação de novo agendamento para o barbeiro via Telegram Bot.
+     * Faz POST para /api/telegram que processa a mensagem.
+     */
     function sendTelegramNotificationToBarber() {
         if (!TELEGRAM_BOT_TOKEN) {
             console.warn('TELEGRAM_BOT_TOKEN não configurado');

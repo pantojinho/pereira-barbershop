@@ -9,8 +9,8 @@
 ## Projeto
 
 **Nome:** Pereira's Barber Shop — Landing Page + Sistema de Agendamento
-**URL Producao:** https://pereira-barbershop.vercel.app
-**URL Agendamento:** https://pereira-barbershop.vercel.app/agendar.html
+**URL Producao:** https://www.pereira-barbershop.com.br
+**URL Agendamento:** https://www.pereira-barbershop.com.br/agendar.html
 **Repo:** https://github.com/ciandrini/pereira-barbershop
 **Framework:** Site estatico (HTML + CSS + JS puro)
 **Deploy:** Vercel (static files, sem framework, sem build)
