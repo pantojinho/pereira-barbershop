@@ -123,8 +123,8 @@ async function getTodayAppointments(chatId) {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          p_barber_telegram_chat_id: chatId,
-          p_appointment_date: today
+          p_chat_id: String(chatId),
+          p_date: today
         })
       });
       const rpcData = await rpcResponse.json();
