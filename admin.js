@@ -151,6 +151,9 @@
             clearInterval(_pollingInterval);
             _pollingInterval = null;
         }
+        _knownAppointmentIds = {};
+        _seenAppointmentIds = {};
+        _lastPolledCount = -1;
         await sb.auth.signOut();
         $('admin-panel').style.display = 'none';
         $('login-screen').style.display = 'flex';
@@ -248,10 +251,8 @@
         loadAdmins();
         loadAppointments();
 
-        initNotificationSound();
         requestBrowserNotificationPermission();
-        loadKnownAppointments();
-        startRealtimeSubscription();
+        startNotifications();
     }
 
     // ========== TAB NAVIGATION ==========
@@ -1981,12 +1982,28 @@
     // ========== NOTIFICATIONS ==========
 
     var _knownAppointmentIds = {};
-    var _notificationSound = null;
+    var _seenAppointmentIds = {};
+    var _audioCtx = null;
     var _realtimeSubscription = null;
+    var _pollingInterval = null;
+    var _lastPolledCount = -1;
 
-    function initNotificationSound() {
+    function playNotificationSound() {
         try {
-            _notificationSound = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdH2JkZeXkIuEfXdxb3B1fIeRmZuXj4Z9dG1pbHN+iZOZm5aMgXdua2xxeYSPlpqYkYiAdnBtcHd/ipSampeTiYF4cG5wd4KMlpmYk4qBeXJvcniCjZaZl5KJgXlyb3J4go2WmZeSiYF5cm9yeIKNlpmXkomBeXJvcniCjZaZl5KJgXlyb3J4go2WmZeSiYF5cm9yeIKNlpmXkomB');
+            if (!_audioCtx) _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            var ctx = _audioCtx;
+            var osc = ctx.createOscillator();
+            var gain = ctx.createGain();
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(880, ctx.currentTime);
+            osc.frequency.setValueAtTime(1100, ctx.currentTime + 0.1);
+            osc.frequency.setValueAtTime(880, ctx.currentTime + 0.2);
+            gain.gain.setValueAtTime(0.3, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.4);
+            osc.start(ctx.currentTime);
+            osc.stop(ctx.currentTime + 0.4);
         } catch (e) {}
     }
 
@@ -2004,42 +2021,65 @@
                 body: body,
                 icon: 'logo.png',
                 badge: 'logo.png',
-                tag: 'pereira-appointment',
-                requireInteraction: true
+                tag: 'pereira-appointment-' + Date.now()
             });
             n.onclick = function () {
                 window.focus();
                 switchTab('dashboard');
                 n.close();
             };
+            setTimeout(function () { n.close(); }, 8000);
         } catch (e) {}
-    }
-
-    function playNotificationSound() {
-        if (_notificationSound) {
-            try {
-                _notificationSound.currentTime = 0;
-                _notificationSound.play().catch(function () {});
-            } catch (e) {}
-        }
     }
 
     function updateNotificationBadge() {
         var today = todayStr();
-        sb.from('appointments').select('id, appointment_time, client_name, status, barber:barbers(name), service_names').eq('appointment_date', today).neq('status', 'cancelled').order('appointment_time')
-        .then(function (result) {
+        var query = sb.from('appointments').select('id, appointment_time, client_name, status, barber:barbers(name), service_names').eq('appointment_date', today).neq('status', 'cancelled').order('appointment_time');
+        if (currentUserRole === 'barber' && currentUserBarberId) {
+            query = query.eq('barber_id', currentUserBarberId);
+        }
+        query.then(function (result) {
             var appointments = result.data || [];
-            if (currentUserRole === 'barber' && currentUserBarberId) {
-                appointments = appointments.filter(function (a) { return a.barber_id === currentUserBarberId; });
+            var allIds = appointments.map(function (a) { return a.id; });
+            var newIds = allIds.filter(function (id) { return !_knownAppointmentIds[id]; });
+
+            if (newIds.length > 0 && _lastPolledCount >= 0) {
+                newIds.forEach(function (id) { _knownAppointmentIds[id] = true; });
+                var newAppts = appointments.filter(function (a) { return newIds.indexOf(a.id) >= 0; });
+                newAppts.forEach(function (a) {
+                    var clientName = a.client_name || 'Cliente';
+                    var time = a.appointment_time ? formatTime(a.appointment_time) : '';
+                    var barberName = a.barber ? a.barber.name : 'Barbeiro';
+                    var services = (a.service_names || []).join(', ');
+                    showBrowserNotification(
+                        'Novo Agendamento!',
+                        clientName + ' às ' + time + ' com ' + barberName + ' — ' + services
+                    );
+                    playNotificationSound();
+                    toast('Novo agendamento: ' + clientName + ' às ' + time, 'success');
+                });
+
+                var btn = $('btn-notifications');
+                if (btn) {
+                    btn.classList.add('has-new');
+                    setTimeout(function () { btn.classList.remove('has-new'); }, 700);
+                }
+
+                loadDashboard();
+                loadAppointments(currentPage);
             }
-            var count = appointments.length;
+
+            _lastPolledCount = appointments.length;
+
+            var unseenCount = allIds.filter(function (id) { return !_seenAppointmentIds[id]; }).length;
             var badge = $('notification-badge');
-            if (count > 0) {
-                badge.textContent = count > 9 ? '9+' : count;
+            if (unseenCount > 0) {
+                badge.textContent = unseenCount > 9 ? '9+' : unseenCount;
                 badge.style.display = 'flex';
             } else {
                 badge.style.display = 'none';
             }
+
             renderNotificationPanel(appointments);
         });
     }
@@ -2062,7 +2102,6 @@
             var tParts = time.split(':');
             var apptMin = parseInt(tParts[0]) * 60 + parseInt(tParts[1]);
             var isPast = apptMin < nowMin;
-            var isNext = !isPast;
             var statusLabel = { confirmed: 'Confirmado', pending: 'Pendente', cancelled: 'Cancelado', completed: 'Concluído' }[a.status] || a.status;
             var statusClass = 'status-' + a.status;
             var barberName = a.barber ? a.barber.name : 'Barbeiro';
@@ -2082,85 +2121,24 @@
     function toggleNotificationPanel() {
         var panel = $('notification-panel');
         var isVisible = panel.style.display !== 'none';
-        panel.style.display = isVisible ? 'none' : 'block';
-        if (!isVisible) {
+        if (isVisible) {
+            panel.style.display = 'none';
+        } else {
+            var today = todayStr();
+            var query = sb.from('appointments').select('id').eq('appointment_date', today).neq('status', 'cancelled');
+            if (currentUserRole === 'barber' && currentUserBarberId) {
+                query = query.eq('barber_id', currentUserBarberId);
+            }
+            query.then(function (result) {
+                (result.data || []).forEach(function (a) { _seenAppointmentIds[a.id] = true; });
+                $('notification-badge').style.display = 'none';
+            });
+            panel.style.display = 'block';
             updateNotificationBadge();
         }
     }
 
-    function startRealtimeSubscription() {
-        if (_realtimeSubscription) {
-            try { sb.removeAllChannels(); } catch (e) {}
-        }
-
-        try {
-            var channel = sb
-                .channel('admin-appointments')
-                .on('postgres_changes',
-                    { event: 'INSERT', schema: 'public', table: 'appointments' },
-                    function (payload) {
-                        var a = payload.new;
-                        if (!a) return;
-                        if (a.appointment_date !== todayStr()) return;
-                        if (currentUserRole === 'barber' && currentUserBarberId && a.barber_id !== currentUserBarberId) return;
-                        if (_knownAppointmentIds[a.id]) return;
-
-                        _knownAppointmentIds[a.id] = true;
-
-                        var clientName = a.client_name || 'Cliente';
-                        var time = a.appointment_time ? formatTime(a.appointment_time) : '';
-                        var barberName = 'Barbeiro';
-
-                        sb.from('barbers').select('name').eq('id', a.barber_id).single().then(function (r) {
-                            if (r.data) barberName = r.data.name;
-                            var services = (a.service_names || []).join(', ');
-
-                            showBrowserNotification(
-                                'Novo Agendamento!',
-                                clientName + ' às ' + time + ' com ' + barberName + ' — ' + services
-                            );
-                            playNotificationSound();
-                            toast('Novo agendamento: ' + clientName + ' às ' + time, 'success');
-                        });
-
-                        updateNotificationBadge();
-                        loadDashboard();
-                    }
-                )
-                .on('postgres_changes',
-                    { event: 'UPDATE', schema: 'public', table: 'appointments' },
-                    function (payload) {
-                        updateNotificationBadge();
-                        loadDashboard();
-                    }
-                )
-                .on('postgres_changes',
-                    { event: 'DELETE', schema: 'public', table: 'appointments' },
-                    function () {
-                        updateNotificationBadge();
-                        loadDashboard();
-                    }
-                )
-                .subscribe();
-
-            _realtimeSubscription = channel;
-        } catch (e) {
-            console.warn('Realtime subscription failed, falling back to polling:', e);
-            startPolling();
-        }
-    }
-
-    var _pollingInterval = null;
-
-    function startPolling() {
-        if (_pollingInterval) clearInterval(_pollingInterval);
-        _pollingInterval = setInterval(function () {
-            updateNotificationBadge();
-            loadDashboard();
-        }, 30000);
-    }
-
-    function loadKnownAppointments() {
+    function startNotifications() {
         var today = todayStr();
         var query = sb.from('appointments').select('id').eq('appointment_date', today).neq('status', 'cancelled');
         if (currentUserRole === 'barber' && currentUserBarberId) {
@@ -2169,9 +2147,49 @@
         query.then(function (result) {
             (result.data || []).forEach(function (a) {
                 _knownAppointmentIds[a.id] = true;
+                _seenAppointmentIds[a.id] = true;
             });
+            _lastPolledCount = (result.data || []).length;
             updateNotificationBadge();
+            startPolling();
+            tryRealtimeSubscription();
         });
+    }
+
+    function startPolling() {
+        if (_pollingInterval) clearInterval(_pollingInterval);
+        _pollingInterval = setInterval(function () {
+            updateNotificationBadge();
+        }, 15000);
+    }
+
+    function tryRealtimeSubscription() {
+        try {
+            var channel = sb
+                .channel('admin-appointments')
+                .on('postgres_changes',
+                    { event: 'INSERT', schema: 'public', table: 'appointments' },
+                    function () { updateNotificationBadge(); }
+                )
+                .on('postgres_changes',
+                    { event: 'UPDATE', schema: 'public', table: 'appointments' },
+                    function () { updateNotificationBadge(); }
+                )
+                .on('postgres_changes',
+                    { event: 'DELETE', schema: 'public', table: 'appointments' },
+                    function () { updateNotificationBadge(); }
+                )
+                .subscribe(function (status) {
+                    if (status === 'SUBSCRIBED') {
+                        console.log('Realtime connected');
+                    } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+                        console.warn('Realtime failed, polling active');
+                    }
+                });
+            _realtimeSubscription = channel;
+        } catch (e) {
+            console.warn('Realtime not available, polling active');
+        }
     }
 
     // ========== EVENT LISTENERS ==========
