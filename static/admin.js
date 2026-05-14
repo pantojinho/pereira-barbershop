@@ -143,6 +143,14 @@
     }
 
     async function handleLogout() {
+        if (_realtimeSubscription) {
+            try { sb.removeAllChannels(); } catch (e) {}
+            _realtimeSubscription = null;
+        }
+        if (_pollingInterval) {
+            clearInterval(_pollingInterval);
+            _pollingInterval = null;
+        }
         await sb.auth.signOut();
         $('admin-panel').style.display = 'none';
         $('login-screen').style.display = 'flex';
@@ -239,6 +247,11 @@
         loadProductOrders();
         loadAdmins();
         loadAppointments();
+
+        initNotificationSound();
+        requestBrowserNotificationPermission();
+        loadKnownAppointments();
+        startRealtimeSubscription();
     }
 
     // ========== TAB NAVIGATION ==========
@@ -1965,6 +1978,202 @@
         });
     }
 
+    // ========== NOTIFICATIONS ==========
+
+    var _knownAppointmentIds = {};
+    var _notificationSound = null;
+    var _realtimeSubscription = null;
+
+    function initNotificationSound() {
+        try {
+            _notificationSound = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdH2JkZeXkIuEfXdxb3B1fIeRmZuXj4Z9dG1pbHN+iZOZm5aMgXdua2xxeYSPlpqYkYiAdnBtcHd/ipSampeTiYF4cG5wd4KMlpmYk4qBeXJvcniCjZaZl5KJgXlyb3J4go2WmZeSiYF5cm9yeIKNlpmXkomBeXJvcniCjZaZl5KJgXlyb3J4go2WmZeSiYF5cm9yeIKNlpmXkomB');
+        } catch (e) {}
+    }
+
+    function requestBrowserNotificationPermission() {
+        if (!('Notification' in window)) return;
+        if (Notification.permission === 'default') {
+            Notification.requestPermission();
+        }
+    }
+
+    function showBrowserNotification(title, body) {
+        if (!('Notification' in window) || Notification.permission !== 'granted') return;
+        try {
+            var n = new Notification(title, {
+                body: body,
+                icon: 'logo.png',
+                badge: 'logo.png',
+                tag: 'pereira-appointment',
+                requireInteraction: true
+            });
+            n.onclick = function () {
+                window.focus();
+                switchTab('dashboard');
+                n.close();
+            };
+        } catch (e) {}
+    }
+
+    function playNotificationSound() {
+        if (_notificationSound) {
+            try {
+                _notificationSound.currentTime = 0;
+                _notificationSound.play().catch(function () {});
+            } catch (e) {}
+        }
+    }
+
+    function updateNotificationBadge() {
+        var today = todayStr();
+        sb.from('appointments').select('id, appointment_time, client_name, status, barber:barbers(name), service_names').eq('appointment_date', today).neq('status', 'cancelled').order('appointment_time')
+        .then(function (result) {
+            var appointments = result.data || [];
+            if (currentUserRole === 'barber' && currentUserBarberId) {
+                appointments = appointments.filter(function (a) { return a.barber_id === currentUserBarberId; });
+            }
+            var count = appointments.length;
+            var badge = $('notification-badge');
+            if (count > 0) {
+                badge.textContent = count > 9 ? '9+' : count;
+                badge.style.display = 'flex';
+            } else {
+                badge.style.display = 'none';
+            }
+            renderNotificationPanel(appointments);
+        });
+    }
+
+    function renderNotificationPanel(appointments) {
+        var panelDate = $('notification-panel-date');
+        var panelList = $('notification-panel-list');
+        if (panelDate) panelDate.textContent = formatDate(todayStr());
+
+        if (!appointments.length) {
+            panelList.innerHTML = '<p class="notification-empty"><i class="fas fa-calendar-check"></i> Nenhum agendamento para hoje</p>';
+            return;
+        }
+
+        var now = new Date();
+        var nowMin = now.getHours() * 60 + now.getMinutes();
+
+        panelList.innerHTML = appointments.map(function (a) {
+            var time = formatTime(a.appointment_time);
+            var tParts = time.split(':');
+            var apptMin = parseInt(tParts[0]) * 60 + parseInt(tParts[1]);
+            var isPast = apptMin < nowMin;
+            var isNext = !isPast;
+            var statusLabel = { confirmed: 'Confirmado', pending: 'Pendente', cancelled: 'Cancelado', completed: 'Concluído' }[a.status] || a.status;
+            var statusClass = 'status-' + a.status;
+            var barberName = a.barber ? a.barber.name : 'Barbeiro';
+            var services = (a.service_names || []).join(', ');
+
+            return '<div class="notification-item' + (isPast ? ' past' : '') + '">' +
+                '<div class="notification-item-time">' + time + '</div>' +
+                '<div class="notification-item-info">' +
+                    '<div class="notification-item-name">' + escapeHTML(a.client_name) + '</div>' +
+                    '<div class="notification-item-meta">' + escapeHTML(barberName) + ' &bull; ' + escapeHTML(services) + '</div>' +
+                '</div>' +
+                '<span class="notification-item-status ' + statusClass + '">' + statusLabel + '</span>' +
+            '</div>';
+        }).join('');
+    }
+
+    function toggleNotificationPanel() {
+        var panel = $('notification-panel');
+        var isVisible = panel.style.display !== 'none';
+        panel.style.display = isVisible ? 'none' : 'block';
+        if (!isVisible) {
+            updateNotificationBadge();
+        }
+    }
+
+    function startRealtimeSubscription() {
+        if (_realtimeSubscription) {
+            try { sb.removeAllChannels(); } catch (e) {}
+        }
+
+        try {
+            var channel = sb
+                .channel('admin-appointments')
+                .on('postgres_changes',
+                    { event: 'INSERT', schema: 'public', table: 'appointments' },
+                    function (payload) {
+                        var a = payload.new;
+                        if (!a) return;
+                        if (a.appointment_date !== todayStr()) return;
+                        if (currentUserRole === 'barber' && currentUserBarberId && a.barber_id !== currentUserBarberId) return;
+                        if (_knownAppointmentIds[a.id]) return;
+
+                        _knownAppointmentIds[a.id] = true;
+
+                        var clientName = a.client_name || 'Cliente';
+                        var time = a.appointment_time ? formatTime(a.appointment_time) : '';
+                        var barberName = 'Barbeiro';
+
+                        sb.from('barbers').select('name').eq('id', a.barber_id).single().then(function (r) {
+                            if (r.data) barberName = r.data.name;
+                            var services = (a.service_names || []).join(', ');
+
+                            showBrowserNotification(
+                                'Novo Agendamento!',
+                                clientName + ' às ' + time + ' com ' + barberName + ' — ' + services
+                            );
+                            playNotificationSound();
+                            toast('Novo agendamento: ' + clientName + ' às ' + time, 'success');
+                        });
+
+                        updateNotificationBadge();
+                        loadDashboard();
+                    }
+                )
+                .on('postgres_changes',
+                    { event: 'UPDATE', schema: 'public', table: 'appointments' },
+                    function (payload) {
+                        updateNotificationBadge();
+                        loadDashboard();
+                    }
+                )
+                .on('postgres_changes',
+                    { event: 'DELETE', schema: 'public', table: 'appointments' },
+                    function () {
+                        updateNotificationBadge();
+                        loadDashboard();
+                    }
+                )
+                .subscribe();
+
+            _realtimeSubscription = channel;
+        } catch (e) {
+            console.warn('Realtime subscription failed, falling back to polling:', e);
+            startPolling();
+        }
+    }
+
+    var _pollingInterval = null;
+
+    function startPolling() {
+        if (_pollingInterval) clearInterval(_pollingInterval);
+        _pollingInterval = setInterval(function () {
+            updateNotificationBadge();
+            loadDashboard();
+        }, 30000);
+    }
+
+    function loadKnownAppointments() {
+        var today = todayStr();
+        var query = sb.from('appointments').select('id').eq('appointment_date', today).neq('status', 'cancelled');
+        if (currentUserRole === 'barber' && currentUserBarberId) {
+            query = query.eq('barber_id', currentUserBarberId);
+        }
+        query.then(function (result) {
+            (result.data || []).forEach(function (a) {
+                _knownAppointmentIds[a.id] = true;
+            });
+            updateNotificationBadge();
+        });
+    }
+
     // ========== EVENT LISTENERS ==========
 
     function init() {
@@ -2018,6 +2227,20 @@
         $('btn-add-service').addEventListener('click', function () { showServiceForm(null); });
         $('btn-add-product').addEventListener('click', function () { showProductForm(null); });
         $('btn-add-admin').addEventListener('click', showAddAdminForm);
+
+        $('btn-notifications').addEventListener('click', function (e) {
+            e.stopPropagation();
+            toggleNotificationPanel();
+        });
+        $('notification-panel').addEventListener('click', function (e) {
+            e.stopPropagation();
+        });
+        document.addEventListener('click', function () {
+            var panel = $('notification-panel');
+            if (panel && panel.style.display !== 'none') {
+                panel.style.display = 'none';
+            }
+        });
 
         $('filter-barber').addEventListener('change', function () { loadAppointments(1); });
         $('dashboard-barber').addEventListener('change', function () { loadDashboard(); });
