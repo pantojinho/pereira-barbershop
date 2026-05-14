@@ -7,27 +7,13 @@
 [![Website](https://img.shields.io/website?down_color=red&down_message=offline&up_color=%232D4B40&up_message=online&url=https%3A%2F%2Fwww.pereira-barbershop.com.br)](https://www.pereira-barbershop.com.br)
 [![Vercel](https://img.shields.io/badge/Deploy-Vercel-000?logo=vercel&logoColor=white)](https://vercel.com)
 [![Supabase](https://img.shields.io/badge/Backend-Supabase-3ECF8E?logo=supabase&logoColor=white)](https://supabase.com)
-[![HTML5](https://img.shields.io/badge/Frontend-HTML5-E34F26?logo=html5&logoColor=white)](https://developer.mozilla.org/pt-BR/docs/Web/HTML)
-[![CSS3](https://img.shields.io/badge/Style-CSS3-1572B6?logo=css3&logoColor=white)](https://developer.mozilla.org/pt-BR/docs/Web/CSS)
-[![JavaScript](https://img.shields.io/badge/Logic-JavaScript-F7DF1E?logo=javascript&logoColor=black)](https://developer.mozilla.org/pt-BR/docs/Web/JavaScript)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Telegram](https://img.shields.io/badge/Notificações-Telegram-26A5E4?logo=telegram&logoColor=white)](https://t.me/PereiraBarbershop_bot)
 
 <br>
 
-**Site completo para barbearia** com landing page, agendamento online, lojinha de produtos e painel administrativo.
+**Site completo para barbearia** com landing page, agendamento online, lojinha de produtos, painel administrativo e notificações via Telegram.
 
-[🌐 Visitar Site](https://www.pereira-barbershop.com.br) · [📅 Agendar Horário](https://www.pereira-barbershop.com.br/agendar.html) · [🛒 Lojinha](https://www.pereira-barbershop.com.br/produtos.html) · [👨‍💼 Painel Admin](https://www.pereira-barbershop.com.br/admin.html)
-
-<br>
-
-<p align="center">
-  <img src="screenshots/landing.png" alt="Landing Page - Cartão de Visitas Digital" width="45%" />
-  <img src="screenshots/agendar.png" alt="Sistema de Agendamento Online" width="45%" />
-</p>
-<p align="center">
-  <img src="screenshots/produtos.png" alt="Lojinha de Produtos" width="45%" />
-  <img src="https://via.placeholder.com/800x450/2D4B40/F8F5ED?text=👨‍💼+Painel+Administrativo" alt="Painel Administrativo" width="45%" />
-</p>
+[🌐 Visitar Site](https://pereira-barbershop.vercel.app) · [📅 Agendar Horário](https://pereira-barbershop.vercel.app/agendar.html) · [🛒 Lojinha](https://pereira-barbershop.vercel.app/produtos.html) · [👨‍💼 Painel Admin](https://pereira-barbershop.vercel.app/admin.html)
 
 </div>
 
@@ -35,47 +21,35 @@
 
 ## 📖 Sobre
 
-**Pereira's Barber Shop** é uma barbearia tradicional localizada em **Votorantim, São Paulo**, atuando desde **2016**. Este projeto é o site oficial da barbearia, funcionando como um **cartão de visitas digital** completo com sistema de agendamento, lojinha de produtos e gestão administrativa — tudo integrado em uma plataforma moderna e responsiva.
+**Pereira's Barber Shop** é uma barbearia tradicional em **Votorantim, São Paulo**, desde **2016**. Este projeto é o site oficial — um cartão de visitas digital com agendamento online, lojinha de produtos e gestão administrativa.
 
-Construído com **HTML, CSS e JavaScript puros** (sem frameworks), utilizando **Supabase** como backend (PostgreSQL, Auth e Storage) e deploy contínuo via **Vercel**. Para desenvolvimento local, um servidor **FastAPI** é utilizado.
+Construído com **HTML, CSS e JavaScript puros** (sem frameworks), backend no **Supabase** (PostgreSQL, Auth, Storage), deploy no **Vercel** e notificações via **Telegram Bot**.
 
 ---
 
 ## ⚡ Funcionalidades
 
-- 🏠 **Landing Page** — Cartão de visitas digital com identidade visual vintage, informações de contato, serviços, barbeiros e QR Code para agendamento
-- 📅 **Agendamento Online** — Fluxo completo em 4 passos: Escolher Barbeiro → Selecionar Serviço(s) → Data e Horário → Dados do Cliente + Confirmação
-- 🛒 **Lojinha de Produtos** — Catálogo com carrinho de compras, controle de estoque em tempo real e checkout via WhatsApp
-- 👨‍💼 **Painel Administrativo** — Dashboard completo com CRUD de barbeiros, serviços, produtos, pedidos, feriados e administradores
-- 🔐 **Autenticação** — Sistema de login seguro para administradores e barbeiros (via Supabase Auth)
-- 📱 **100% Responsivo** — Design mobile-first que funciona perfeitamente em qualquer dispositivo
-- 🔔 **Confirmação via WhatsApp** — Links de confirmação gerados automaticamente após agendamento ou pedido
-- 🏖️ **Sistema de Feriados** — Configuração de dias de folga que bloqueiam automaticamente a agenda
-- 📊 **Dashboard com Estatísticas** — Visualização de agendamentos, faturamento e métricas de desempenho
-
----
-
-## 🎬 Demonstração
-
-| Página | URL | Descrição |
-|---|---|---|
-| 🌐 Site Principal | [pereira-barbershop.com.br](https://www.pereira-barbershop.com.br) | Landing page com informações da barbearia |
-| 📅 Agendamento | [/agendar.html](https://www.pereira-barbershop.com.br/agendar.html) | Sistema de agendamento online |
-| 🛒 Lojinha | [/produtos.html](https://www.pereira-barbershop.com.br/produtos.html) | Catálogo e carrinho de produtos |
-| 👨‍💼 Admin | [/admin.html](https://www.pereira-barbershop.com.br/admin.html) | Painel administrativo (login necessário) |
+- 🏠 **Landing Page** — Cartão de visitas digital com identidade visual vintage
+- 📅 **Agendamento Online** — Barbeiro → Serviço → Data/Hora → Dados do Cliente
+- 🛒 **Lojinha de Produtos** — Catálogo com carrinho, estoque e checkout via WhatsApp
+- 👨‍💼 **Painel Administrativo** — Dashboard, CRUD completo (barbeiros, serviços, produtos, feriados, admins)
+- 🔔 **Notificações em Tempo Real** — Sino com badge, som e atualização automática a cada 15s
+- 📲 **Telegram Bot** — Barbeiros recebem notificação no Telegram quando chega agendamento
+- 🔐 **Autenticação** — Login seguro (Supabase Auth) com roles admin/barbeiro
+- 🏖️ **Feriados** — Dias de folga bloqueiam a agenda automaticamente
+- 📱 **100% Responsivo** — Mobile-first
 
 ---
 
 ## 🛠️ Tech Stack
 
-| Tecnologia | Uso | Logo |
-|---|---|---|
-| **HTML5** | Estrutura e semântica das páginas | ![HTML5](https://img.shields.io/badge/-HTML5-E34F26?logo=html5&logoColor=white) |
-| **CSS3** | Estilização, responsividade, animações | ![CSS3](https://img.shields.io/badge/-CSS3-1572B6?logo=css3&logoColor=white) |
-| **JavaScript** | Lógica de aplicação, integração com APIs | ![JavaScript](https://img.shields.io/badge/-JavaScript-F7DF1E?logo=javascript&logoColor=black) |
-| **Supabase** | Banco de dados (PostgreSQL), Auth, Storage | ![Supabase](https://img.shields.io/badge/-Supabase-3ECF8E?logo=supabase&logoColor=white) |
-| **Vercel** | Deploy e hospedagem (CI/CD automático) | ![Vercel](https://img.shields.io/badge/-Vercel-000?logo=vercel&logoColor=white) |
-| **FastAPI** | Servidor local para desenvolvimento | ![FastAPI](https://img.shields.io/badge/-FastAPI-009688?logo=fastapi&logoColor=white) |
+| Tecnologia | Uso |
+|---|---|
+| **HTML5 + CSS3 + JS** | Frontend completo, sem frameworks |
+| **Supabase** | PostgreSQL, Auth, Storage, Realtime |
+| **Vercel** | Deploy estático automático (CI/CD) |
+| **Telegram Bot API** | Notificações gratuitas para barbeiros |
+| **FastAPI** | Servidor local para desenvolvimento |
 
 ---
 
@@ -83,153 +57,239 @@ Construído com **HTML, CSS e JavaScript puros** (sem frameworks), utilizando **
 
 ```
 pereira-barbershop/
-├── 📄 index.html                    # Landing page principal
-├── 🎨 style.css                     # Estilos da landing page
-├── 📄 agendar.html                  # Página de agendamento
-├── 🎨 agendar.css                   # Estilos do agendamento
-├── ⚙️ agendar.js                    # Lógica do agendamento
-├── 📄 produtos.html                  # Lojinha de produtos
-├── 🎨 produtos.css                   # Estilos da lojinha
-├── ⚙️ produtos.js                    # Lógica do carrinho e pedidos
-├── 📄 admin.html                    # Painel administrativo
-├── 🎨 admin.css                     # Estilos do painel admin
-├── ⚙️ admin.js                      # Lógica do painel admin
-├── ⚙️ supabase-config.js            # Configuração Supabase (gitignored)
-├── 🗃️ supabase-schema.sql           # SQL — criação das tabelas
-├── 🔒 supabase-security-hardening.sql # SQL — RLS + políticas de segurança
-├── 🖼️ logo.png                      # Logo oficial
-├── 🖼️ favicon.svg                   # Favicon
-├── ⚙️ vercel.json                   # Configuração Vercel (deploy estático)
-├── 🐍 server.py                     # Servidor local FastAPI
-├── 📋 requirements.txt              # Dependências Python (gitignored)
-├── 📁 static/                       # Arquivos para servidor local
-│   ├── index.html
-│   ├── style.css
-│   ├── agendar.html
-│   ├── agendar.css
-│   ├── agendar.js
-│   ├── admin.html
-│   ├── admin.css
-│   ├── admin.js
-│   ├── produtos.html
-│   ├── produtos.css
-│   ├── produtos.js
-│   ├── supabase-config.js
-│   ├── logo.png
-│   └── favicon.svg
-├── 📄 AGENTS.md                     # Memória para agentes de IA
-├── 📄 README.md                     # Este arquivo
-└── 📄 .gitignore                    # Arquivos ignorados pelo Git
+├── index.html              # Landing page
+├── style.css               # Estilos landing
+├── agendar.html/css/js     # Sistema de agendamento
+├── admin.html/css/js       # Painel administrativo
+├── produtos.html/css/js    # Lojinha de produtos
+├── supabase-config.js      # Credenciais + token Telegram (GITIGNORED)
+├── supabase-schema.sql     # SQL — criação das tabelas
+├── supabase-security-hardening.sql  # SQL — RLS + segurança
+├── logo.png / favicon.svg  # Assets
+├── vercel.json             # Config Vercel (deploy estático)
+├── server.py               # Servidor local FastAPI
+├── static/                 # Cópia para servidor local
+├── AGENTS.md               # Memória para agentes de IA
+└── README.md               # Este arquivo
 ```
 
 ---
 
-## 🚀 Começando
+## 🚀 Primeira Instalação
 
 ### Pré-requisitos
 
-- **Git** — para clonar o repositório
-- **Python 3.8+** — para rodar o servidor local (opcional)
-- **Conta no Supabase** — para o banco de dados e autenticação
-- **Conta no Vercel** — para deploy (opcional)
+- Conta no **Supabase** (gratuito)
+- Conta no **Vercel** (gratuito)
+- Conta no **GitHub**
 
-### Instalação Local
+### Passo a Passo
 
-```bash
-# 1. Clone o repositório
-git clone https://github.com/pantojinho/pereira-barbershop.git
-cd pereira-barbershop
+#### 1. Supabase
 
-# 2. Crie o arquivo de configuração do Supabase
-cp supabase-config.js.example supabase-config.js
-# Edite com suas credenciais do Supabase
+1. Crie um projeto em [supabase.com](https://supabase.com)
+2. Vá em **SQL Editor** e execute o conteúdo de `supabase-schema.sql`
+3. Execute também `supabase-security-hardening.sql`
+4. Vá em **Authentication → Providers** e habilite **Email/Password**
+5. Crie o primeiro usuário em **Authentication → Add User**
+6. Anote a **URL do projeto** e a **anon key** (Settings → API)
 
-# 3. (Opcional) Instale dependências do servidor local
-pip install fastapi uvicorn
+#### 2. Configuração local
 
-# 4. (Opcional) Inicie o servidor local
-python server.py
-# Acesse: http://localhost:8000
-```
-
-> 💡 **Dica:** Você também pode abrir o `index.html` diretamente no navegador para visualizar a landing page.
-
-### Variáveis de Ambiente
-
-Crie o arquivo `supabase-config.js` na raiz do projeto com as seguintes credenciais:
+Crie o arquivo `supabase-config.js` na raiz do projeto:
 
 ```javascript
-const SUPABASE_URL = 'https://seu-projeto.supabase.co';
-const SUPABASE_ANON_KEY = 'sua-anon-key-aqui';
+var SUPABASE_URL = 'https://seu-projeto.supabase.co';
+var SUPABASE_ANON_KEY = 'sua-anon-key-aqui';
+var TELEGRAM_BOT_TOKEN = '';  // Veja seção Telegram abaixo
 ```
 
-> ⚠️ **Importante:** Este arquivo está no `.gitignore` e **nunca** deve ser commitado no repositório.
+> ⚠️ Este arquivo está no `.gitignore` e **nunca** deve ser commitado.
+
+#### 3. Primeiro administrador
+
+Após criar o usuário no Supabase Auth, insira manualmente na tabela `admins`:
+
+```sql
+INSERT INTO admins (user_id, email, role)
+VALUES ('uid-do-usuario', 'email@exemplo.com', 'admin');
+```
+
+#### 4. Deploy no Vercel
+
+1. Faça push do código para o GitHub
+2. Acesse [vercel.com](https://vercel.com) e importe o repositório
+3. O `vercel.json` já está configurado — não precisa mudar nada
+4. Clique em **Deploy**
+
+> ⚠️ Nunca commit `requirements.txt` no repositório — isso faz o Vercel detectar como projeto Python e quebrar o deploy.
 
 ---
 
-## 🗄️ Banco de Dados
+## 📲 Configuração do Telegram (Notificações para Barbeiros)
 
-O banco de dados utiliza **PostgreSQL** via Supabase com as seguintes tabelas:
+O sistema envia notificações gratuitas via **Telegram Bot** quando chega um novo agendamento. O barbeiro recebe nome do cliente, horário, serviço e data direto no Telegram.
+
+### Criando o Bot
+
+1. Abra o Telegram e procure **@BotFather**
+2. Envie `/newbot`
+3. Escolha um nome (ex: `Pereira Barber Notifier`)
+4. Escolha um username (ex: `pereira_barber_bot`)
+5. Copie o **token** fornecido (ex: `123456789:ABCdefGHI...`)
+6. Cole o token no `supabase-config.js`:
+   ```javascript
+   var TELEGRAM_BOT_TOKEN = '123456789:ABCdefGHI...';
+   ```
+
+### Cadastrando os Barbeiros
+
+O Telegram **não usa número de telefone** — cada barbeiro precisa de um **Chat ID**. Siga estes passos:
+
+**Passo 1** — Mande o link abaixo para cada barbeiro (pode ser no WhatsApp ou grupo):
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                     SCHEMA: public                              │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│  ┌──────────┐    ┌───────────┐    ┌──────────────┐             │
-│  │ barbers  │    │ services  │    │ appointments │             │
-│  ├──────────┤    ├───────────┤    ├──────────────┤             │
-│  │ id (PK)  │    │ id (PK)   │    │ id (PK)      │             │
-│  │ name     │    │ name      │    │ barber_id(FK)│──► barbers  │
-│  │ photo    │    │ price     │    │ service_id(FK)│──► services │
-│  │ active   │    │ duration  │    │ date         │             │
-│  │ order    │    │ active    │    │ time         │             │
-│  └──────────┘    │ order     │    │ client_name  │             │
-│                  └───────────┘    │ client_phone │             │
-│                                   │ status       │             │
-│  ┌──────────┐    ┌──────────────┐ └──────────────┘             │
-│  │ products │    │product_orders│                              │
-│  ├──────────┤    ├──────────────┤                              │
-│  │ id (PK)  │    │ id (PK)      │                              │
-│  │ name     │    │ products (JSON)│──► products                │
-│  │ price    │    │ client_name  │                              │
-│  │ image    │    │ client_phone │                              │
-│  │ stock    │    │ total        │                              │
-│  │ active   │    │ status       │                              │
-│  └──────────┘    └──────────────┘                              │
-│                                                                 │
-│  ┌──────────┐    ┌──────────┐                                  │
-│  │ holidays │    │  admins  │                                  │
-│  ├──────────┤    ├──────────┤                                  │
-│  │ id (PK)  │    │ id (PK)  │                                  │
-│  │ date     │    │ email    │                                  │
-│  │ description│  │ role     │                                  │
-│  └──────────┘    └──────────┘                                  │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
+https://t.me/PereiraBarbershop_bot?start=oi
 ```
 
-### Detalhes das Tabelas
+> O barbeiro clica no link, abre o Telegram e aperta **Iniciar**. Pronto.
 
-- **barbers** — Barbeiros da equipe (nome, foto, status ativo)
-- **services** — Serviços oferecidos com preço e duração
-- **appointments** — Agendamentos realizados (barbeiro, serviço, data/hora, cliente)
-- **products** — Produtos da lojinha com controle de estoque
-- **product_orders** — Pedidos da lojinha com itens em JSON
-- **holidays** — Dias de folga que bloqueiam a agenda
-- **admins** — Administradores do sistema com roles
+**Passo 2** — Depois que todos os barbeiros clicarem, acesse no navegador:
 
-> 📋 O SQL completo de criação está em `supabase-schema.sql` e as políticas de segurança em `supabase-security-hardening.sql`.
+```
+https://api.telegram.org/bot{SEU_TOKEN}/getUpdates
+```
+
+**Passo 3** — Na página que abrir, procure por `"chat":{"id": 123456789}`. O número é o **Chat ID** daquele barbeiro.
+
+**Passo 4** — No painel admin (`/admin.html`), edite o barbeiro e cole o Chat ID no campo **Telegram Chat ID**.
+
+### Exemplo prático
+
+```
+Barbeiro: Rafael
+1. Rafael clica no link e aperta Iniciar no bot
+2. Você acessa getUpdates e encontra: "chat":{"id": 987654321}
+3. No painel admin → Barbeiros → Editar Rafael → Telegram Chat ID: 987654321
+4. Pronto! Agora Rafael recebe notificação toda vez que agendarem com ele
+```
+
+> 💡 **Dica:** Se `getUpdates` mostrar vazio `{"ok":true,"result":[]}`, significa que nenhum barbeiro clicou no link ainda. Peça para eles clicarem e tente novamente.
+
+---
+
+## 🗄️ Banco de Dados (Supabase)
+
+```
+┌──────────────┐     ┌────────────────────┐
+│   barbers    │     │  barber_schedules  │
+├──────────────┤     ├────────────────────┤
+│ id (PK)      │◄────│ barber_id (FK)     │
+│ name         │     │ day_of_week        │
+│ phone        │     │ start_time         │
+│ photo_url    │     │ end_time           │
+│ telegram_chat_id     └────────────────────┘
+│ active       │
+│ works_holidays│    ┌────────────────┐
+└──────────────┘     │   services     │
+                     ├────────────────┤
+┌──────────────┐     │ id (PK)        │
+│ appointments │     │ name           │
+├──────────────┤     │ price          │
+│ id (PK)      │     │ duration_min   │
+│ barber_id(FK)│──►  │ featured       │
+│ appointment_date    │ active         │
+│ appointment_time    └────────────────┘
+│ client_name  │
+│ client_phone │     ┌────────────────┐
+│ service_names│     │   products     │
+│ obs          │     ├────────────────┤
+│ status       │     │ id (PK)        │
+│ total_price  │     │ name, desc     │
+└──────────────┘     │ price, stock   │
+                     │ photo_url      │
+┌──────────────┐     │ active         │
+│   holidays   │     └────────────────┘
+├──────────────┤
+│ id (PK)      │     ┌────────────────┐     ┌────────────────┐
+│ date         │     │ product_orders │     │     admins     │
+│ description  │     ├────────────────┤     ├────────────────┤
+│ recurring    │     │ id (PK)        │     │ user_id (PK)   │
+└──────────────┘     │ product_ids    │     │ email          │
+                     │ client_name    │     │ role           │
+                     │ client_phone   │     │ barber_id (FK) │
+                     │ total_price    │     └────────────────┘
+                     │ status         │
+                     └────────────────┘
+```
+
+### Status de Agendamentos
+
+| Status | Significado |
+|---|---|
+| `pending` | Aguardando confirmação |
+| `confirmed` | Confirmado pelo admin |
+| `completed` | Atendimento concluído |
+| `cancelled` | Cancelado |
+
+> 📋 SQL completo em `supabase-schema.sql` e `supabase-security-hardening.sql`.
+
+---
+
+## 🔧 Manutenção do Site
+
+### Tarefas do dia a dia
+
+Tudo é feito pelo **Painel Admin** (`/admin.html`):
+
+| Tarefa | Onde fazer |
+|---|---|
+| Ver agendamentos do dia | Dashboard (abre automaticamente ao logar) |
+| Confirmar/Cancelar agendamento | Clique no agendamento → botões de ação |
+| Adicionar/Editar barbeiro | Aba Barbeiros → botão + Novo Barbeiro |
+| Alterar horário do barbeiro | Aba Barbeiros → Editar → horários por dia |
+| Cadastrar feriado | Aba Feriados → botão + Novo Feriado |
+| Adicionar/Editar serviço | Aba Serviços → botão + Novo Serviço |
+| Gerenciar produtos | Aba Produtos → CRUD completo |
+| Ver pedidos da lojinha | Aba Pedidos |
+| Criar novo usuário admin | Aba Usuários → botão + Novo Usuário |
+
+### Notificações no painel admin
+
+- O painel atualiza **automaticamente a cada 15 segundos** — não precisa dar F5
+- O **sino** no canto superior mostra quantos agendamentos existem para hoje
+- Clique no sino para ver a lista completa de agendamentos do dia
+- Quando chega um agendamento novo: **som** + **toast** + **badge vermelho** no sino
+- Se o barbeiro tiver Telegram configurado, ele também recebe notificação
+
+### Como adicionar um novo barbeiro
+
+1. Painel Admin → Barbeiros → **+ Novo Barbeiro**
+2. Preencha o nome
+3. (Opcional) Telefone e foto
+4. (Opcional) Telegram Chat ID (veja seção Telegram acima)
+5. Marque os dias de trabalho e horários
+6. Clique em **Salvar**
+
+### Como alterar preços/serviços
+
+1. Painel Admin → Serviços → **Editar** no serviço desejado
+2. Altere preço, duração ou nome
+3. Para destacar um serviço como "MAIS PEDIDO", marque o checkbox
+
+### Sincronização de arquivos
+
+Ao editar arquivos HTML/CSS/JS, sempre atualize **ambos**:
+- Arquivo na **raiz** (usado pelo Vercel)
+- Arquivo na pasta **static/** (usado pelo servidor local)
 
 ---
 
 ## 🌍 Deploy no Vercel
 
-O deploy é automático via **Vercel** a cada push na branch `main`.
+O deploy é **automático** a cada `git push` na branch `main`.
 
-### Configuração
-
-O arquivo `vercel.json` já está configurado para deploy estático:
+### Configuração do vercel.json
 
 ```json
 {
@@ -240,81 +300,46 @@ O arquivo `vercel.json` já está configurado para deploy estático:
 }
 ```
 
-### Passos para Deploy
+### Para fazer deploy de uma mudança
 
-1. **Fork** ou clone este repositório
-2. Acesse [vercel.com](https://vercel.com) e faça login
-3. Clique em **"New Project"** → Importe o repositório
-4. Configure as variáveis de ambiente (se necessário)
-5. Clique em **"Deploy"**
+```bash
+git add .
+git commit -m "descrição da mudança"
+git push
+```
 
-> ⚠️ **Atenção:** Nunca commit o `requirements.txt` no repositório — isso faz o Vercel detectar o projeto como Python e quebrar o deploy estático.
+O Vercel detecta o push e faz o deploy automaticamente em ~30 segundos.
 
 ---
 
 ## 🗺️ Roadmap
 
-Próximas funcionalidades planejadas:
-
-- [ ] 📲 **Notificações WhatsApp** — Lembretes automáticos de agendamento via Evolution API / Z-API
-- [ ] 🤖 **Chatbot** — Atendimento automatizado via WhatsApp
-- [ ] 📧 **Notificações Push/E-mail** — Alertas para clientes e administradores
-- [ ] 📈 **Relatórios Avançados** — Exportação de dados e gráficos detalhados
-- [ ] ⭐ **Sistema de Avaliação** — Clientes avaliam barbeiros e serviços
-- [ ] 🔐 **Login de Barbeiros** — Cada barbeiro visualiza sua própria agenda
-- [ ] 📆 **Recorrência** — Agendamentos fixos semanais/mensais
-- [ ] 💳 **Pagamento Online** — Integração com gateway de pagamento
-- [ ] 🎁 **Programa de Fidelidade** — Pontos e recompensas para clientes frequentes
+- [x] 🏠 Landing page
+- [x] 📅 Agendamento online
+- [x] 👨‍💼 Painel administrativo
+- [x] 🛒 Lojinha de produtos
+- [x] 🔔 Notificações em tempo real no painel
+- [x] 📲 Telegram Bot para barbeiros
+- [ ] 📲 Notificações WhatsApp (Evolution API)
+- [ ] 🤖 Chatbot WhatsApp para agendamento
+- [ ] 📈 Relatórios (faturamento, clientes recorrentes)
+- [ ] ⭐ Sistema de avaliação
 
 ---
 
-## 🤝 Contribuindo
+## 🤝 Padrões do Projeto
 
-Contribuições são bem-vindas! Siga os passos abaixo:
-
-1. **Fork** este repositório
-2. Crie uma **branch** para sua feature (`git checkout -b feature/minha-feature`)
-3. Faça o **commit** das alterações (`git commit -m 'feat: minha nova feature'`)
-4. Faça o **push** para a branch (`git push origin feature/minha-feature`)
-5. Abra um **Pull Request**
-
-### Padrões do Projeto
-
-- **HTML/CSS/JS puros** — sem frameworks frontend
-- Arquivos na **raiz** são usados pelo Vercel
-- Arquivos em `static/` são usados pelo servidor local FastAPI
-- Sempre atualize **ambos** ao editar HTML/CSS/assets
+- **HTML/CSS/JS puros** — sem frameworks
+- Arquivos na **raiz** = Vercel, arquivos em `static/` = servidor local
+- Sempre sincronize **ambos** ao editar
 - `supabase-config.js` e `requirements.txt` **nunca** vão para o Git
+- Commits sem emojis, em português ou inglês
 
 ---
 
 ## 📄 Licença
 
-Este projeto está sob a licença **MIT**. Veja o arquivo [LICENSE](LICENSE) para mais detalhes.
-
-```
-MIT License
-
-Copyright (c) 2016-presente Pereira's Barber Shop
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-```
+MIT License — veja o arquivo [LICENSE](LICENSE) para detalhes.
 
 ---
 
@@ -322,34 +347,15 @@ SOFTWARE.
 
 <div align="center">
 
-### ✂️ Pereira's Barber Shop — **Since 2016**
+### ✂️ Pereira's Barber Shop — Since 2016
 
-📍 **Endereço:** Av. Matheus Conegero, 141, Pq Bela Vista, Votorantim - SP
+📍 Av. Matheus Conegero, 141, Pq Bela Vista, Votorantim - SP
+📞 **15 98131-1623** (WhatsApp)
+📸 [@barbeariapereiravotorantim](https://instagram.com/barbeariapereiravotorantim)
+🕐 Seg a Sáb: 09h às 19h · Dom: Fechado
 
-📞 **Telefone/WhatsApp:** 15 98131-1623
+**Equipe:** 💈 Rafael · 💈 Gabriel · 💈 Marcus Vinicius
 
-📸 **Instagram:** [@barbeariapereiravotorantim](https://instagram.com/barbeariapereiravotorantim)
-
-🕐 **Horário de Funcionamento:**
-Segunda a Sábado: 09h às 19h
-Domingo: Fechado
-
----
-
-### Nossa Equipe
-
-💈 **Rafael** · 💈 **Gabriel** · 💈 **Marcus Vinicius**
-
-### Serviços e Preços
-
-✂️ Corte (sobrancelha cortesia) — **R$ 43,00** · 1h
-🪒 Corte + Barbaterapia (sobrancelha cortesia) — **R$ 75,00** · 1h20
-🧔 Barbaterapia (pezinho cortesia) — **R$ 43,00** · 1h
-👃 Orelha e Nariz com cera — **R$ 25,00** · 30min
-✨ Selagem — **R$ 50,00** · 1h
-
----
-
-[🌐 Site](https://www.pereira-barbershop.com.br) · [📅 Agendar](https://www.pereira-barbershop.com.br/agendar.html) · [🛒 Lojinha](https://www.pereira-barbershop.com.br/produtos.html) · [📸 Instagram](https://instagram.com/barbeariapereiravotorantim) · [💬 WhatsApp](https://wa.me/5515981311623)
+[🌐 Site](https://pereira-barbershop.vercel.app) · [📅 Agendar](https://pereira-barbershop.vercel.app/agendar.html) · [📸 Instagram](https://instagram.com/barbeariapereiravotorantim) · [💬 WhatsApp](https://wa.me/5515981311623)
 
 </div>
