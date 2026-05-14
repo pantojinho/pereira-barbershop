@@ -27,6 +27,20 @@ Construído com **HTML, CSS e JavaScript puros** (sem frameworks), backend no **
 
 ---
 
+## 📸 Screenshots
+
+### Landing Page
+Landing page estilo "cartão de visitas digital" com identidade visual vintage.
+
+<img src="assets/screenshots/landing-page.png" alt="Landing Page" width="800">
+
+### Sistema de Agendamento
+Fluxo em 4 passos: Barbeiro → Serviço → Data/Hora → Dados do Cliente.
+
+<img src="assets/screenshots/agendamento-passo1.png" alt="Agendamento - Seleção de Barbeiro" width="800">
+
+---
+
 ## ⚡ Funcionalidades
 
 - 🏠 **Landing Page** — Cartão de visitas digital com identidade visual vintage
