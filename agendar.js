@@ -56,10 +56,13 @@
             var schedResult = await sb.from('barber_schedules').select('*');
             var allSchedules = schedResult.data || [];
 
+            console.log('[DEBUG] All schedules from DB:', allSchedules);
+
             BARBERS = {};
             var html = '';
             barbers.forEach(function (b) {
                 var schedules = allSchedules.filter(function (s) { return s.barber_id === b.id; });
+                console.log('[DEBUG] Barber ' + b.name + ' schedules:', schedules);
                 var daySchedule = {};
                 schedules.forEach(function (s) {
                     daySchedule[s.day_of_week] = {
@@ -67,6 +70,8 @@
                         end: String(s.end_time).substring(0, 5)
                     };
                 });
+
+                console.log('[DEBUG] Barber ' + b.name + ' daySchedule:', daySchedule);
 
                 BARBERS[b.id] = {
                     id: b.id,
@@ -271,6 +276,9 @@
         var dayOfWeek = selectedDate.getDay();
         var daySchedule = barber.schedule[dayOfWeek];
 
+        console.log('[DEBUG] Selected date:', selectedDate.toDateString(), 'Day of week:', dayOfWeek);
+        console.log('[DEBUG] DaySchedule for barber ' + barber.name + ':', daySchedule);
+
         if (!daySchedule) {
             $("time-slots").innerHTML = '<p class="step-subtitle" style="padding:20px 0;">Este barbeiro não trabalha neste dia.</p>';
             $("time-hint").textContent = "Dia indisponível";
@@ -283,6 +291,9 @@
         var endMin = parseInt(endParts[0]) * 60 + parseInt(endParts[1]);
         var serviceDuration = booking.totalDuration || 60;
         var lastSlotMin = endMin - serviceDuration;
+
+        console.log('[DEBUG] Schedule:', daySchedule.start, '-', daySchedule.end);
+        console.log('[DEBUG] startMin:', startMin, 'endMin:', endMin, 'serviceDuration:', serviceDuration, 'lastSlotMin:', lastSlotMin);
 
         var now = new Date();
         var today = new Date();
