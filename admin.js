@@ -1523,7 +1523,7 @@
                         '<button type="button" class="btn-outline btn-sm" id="btn-choose-photo"><i class="fas fa-camera"></i> Escolher Foto</button>' +
                         '<button type="button" class="btn-outline btn-sm btn-danger" id="btn-remove-photo" style="display:none"><i class="fas fa-trash"></i> Remover</button>' +
                     '</div>' +
-                    '<div class="barber-photo-hint">JPG ou PNG, maximo 2MB</div>' +
+                    '<div class="barber-photo-hint">JPG ou PNG, maximo 10MB</div>' +
                 '</div>' +
             '</div>' +
             '<div class="form-group"><label>Horarios por dia da semana</label><div class="schedule-grid">' + scheduleHTML + '</div></div>';
@@ -1640,8 +1640,8 @@
               photoInput.addEventListener('change', function () {
                   var file = this.files[0];
                   if (!file) return;
-                  if (file.size > 2 * 1024 * 1024) {
-                      toast('Foto muito grande. Use imagens ate 2MB.', 'error');
+                  if (file.size > 10 * 1024 * 1024) {
+                      toast('Foto muito grande. Use imagens ate 10MB.', 'error');
                       this.value = '';
                       return;
                   }
@@ -1950,7 +1950,7 @@
                         '<button type="button" class="btn-outline btn-sm" id="btn-choose-product-photo"><i class="fas fa-camera"></i> Escolher Foto</button>' +
                         '<button type="button" class="btn-outline btn-sm btn-danger" id="btn-remove-product-photo" style="display:none"><i class="fas fa-trash"></i> Remover</button>' +
                     '</div>' +
-                    '<div class="barber-photo-hint">JPG ou PNG, maximo 2MB</div>' +
+                    '<div class="barber-photo-hint">JPG ou PNG, maximo 10MB</div>' +
                 '</div>' +
             '</div>';
 
