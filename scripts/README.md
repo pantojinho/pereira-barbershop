@@ -1,114 +1,120 @@
 # Scripts de Configuração
 
-## bot_responde_id.sh
+## configurar_webhook.sh
 
-Script para fazer o bot responder automaticamente com o Chat ID.
+Script para configurar o webhook do Telegram para funcionar 24/7 automaticamente.
 
 ### Uso
 
 ```bash
 cd ~/temp/pereira-barbershop
-bash scripts/bot_responde_id.sh
+bash scripts/configurar_webhook.sh
 ```
 
 ### O que faz
 
-1. Busca todas as mensagens não lidas do bot
-2. Responde a cada pessoa com seu Chat ID
-3. A pessoa pode copiar o ID e mandar para o admin
+1. Configura o webhook do Telegram para apontar para a Vercel Function
+2. Faz o bot responder automaticamente 24/7
+3. Mostra informações do webhook configurado
 
-### Exemplo de resposta do bot
+### Quando usar
+
+- **Após fazer deploy** da `/api/telegram.js`
+- Se o webhook foi desconfigurado
+- Para verificar se o bot está funcionando 24/7
+
+### Exemplo de saída
 
 ```
-👋 Oi, Pantojo!
+🔗 Configurando Webhook do Telegram
+--------------------------------------------------
 
-📱 Seu Chat ID é: 6436594324
+📍 Webhook URL: https://pereira-barbershop.vercel.app/api/telegram
 
-💡 Copie este número e envie para o Gabriel!
+🚀 Enviando configuração...
+✅ Webhook configurado com sucesso!
 
-Ou use este link direto:
-https://t.me/PereiraBarbershop_bot
+--------------------------------------------------
+📱 INFORMAÇÕES:
+--------------------------------------------------
+
+{
+  "ok": true,
+  "result": {
+    "url": "https://pereira-barbershop.vercel.app/api/telegram",
+    "has_custom_certificate": false,
+    "pending_update_count": 0
+  }
+}
+
+--------------------------------------------------
+🎉 Bot agora funciona 24/7 automaticamente!
+--------------------------------------------------
+
+💡 Comandos disponíveis:
+   • /start - Ver Chat ID
+   /hoje  - Ver agendamentos de hoje
+
+🚀 Teste: Mande /start para o bot agora!
+   https://t.me/PereiraBarbershop_bot
 ```
 
-### Fluxo de trabalho
+### Fluxo de trabalho completo
 
-1. **Admin manda para barbeiros:**
-   - Link do bot: https://t.me/PereiraBarbershop_bot
-   - Instrução: "Envie /start para o bot"
-
-2. **Barbeiro inicia o bot:**
-   - Abre o bot
-   - Envia /start
-
-3. **Admin roda o script:**
+1. **Fazer deploy do código:**
    ```bash
-   bash scripts/bot_responde_id.sh
+   cd ~/temp/pereira-barbershop
+   git add api/telegram.js scripts/configurar_webhook.sh
+   git commit -m "feat: bot telegram 24/7"
+   git push origin main
    ```
 
-4. **Bot responde automaticamente:**
-   - Cada barbeiro recebe seu Chat ID
+2. **Aguardar deploy Vercel** (1-2 minutos)
 
-5. **Barbeiro manda o ID para o admin:**
-   - Pode ser via WhatsApp, Telegram, etc.
+3. **Configurar webhook:**
+   ```bash
+   bash scripts/configurar_webhook.sh
+   ```
 
-6. **Admin configura no painel:**
-   - Vai em https://pereira-barbershop.vercel.app/admin.html
-   - Edita o barbeiro
-   - Cola o Chat ID no campo "Telegram Chat ID"
-   - Salva
+4. **Testar:**
+   - Mande `/start` para o bot
+   - Deve responder INSTANTANEAMENTE
 
-### Vantagens
+### Como funciona o webhook
 
-- ✅ Não precisa rodar servidor 24/7
-- ✅ Barbeiro vê o próprio ID
-- ✅ Processo transparente
-- ✅ Funciona instantaneamente
-- ✅ Usa apenas API REST do Telegram
+- Telegram envia mensagens para: `https://pereira-barbershop.vercel.app/api/telegram`
+- Vercel roda a função `/api/telegram.js` automaticamente
+- A função processa a mensagem e responde
+- Funciona 24/7 sem precisar de servidor dedicado
 
 ### Requisitos
 
 - `curl` para chamadas API
 - `jq` para processamento JSON
+- Deploy feito no Vercel
 
----
+### Troubleshooting
 
-## configurar_barbeiros.sh
+#### Bot não responde
 
-Script alternativo para buscar Chat IDs manualmente.
-
-### Uso
+Verifique o webhook:
 
 ```bash
-cd ~/temp/pereira-barbershop
-bash scripts/configurar_barbeiros.sh
+curl -s "https://api.telegram.org/bot8932305524:AAE4CBvVQb-lMG4lnE57WVRKr7Pdwteewds/getWebhookInfo" | jq
 ```
 
-### Quando usar
+A `url` deve ser: `https://pereira-barbershop.vercel.app/api/telegram`
 
-Use este script se:
-- Quer ver TODOS os Chat IDs de uma vez
-- Quer gerar SQL pronto para o Supabase
-- Prefere configurar tudo em lote
+#### Erro ao configurar
 
-### Diferença para bot_responde_id.sh
+Verifique se o deploy terminou:
+- Acesse: https://vercel.com/pantojinho/pereira-barbershop
+- Veja se o último deploy está "Ready"
 
-| Script | Bot responde? | Quem vê o ID? |
-|--------|--------------|--------------|
-| bot_responde_id.sh | ✅ Sim | Barbeiro |
-| configurar_barbeiros.sh | ❌ Não | Admin |
+### Remover webhook
 
-### Saída de exemplo
+Para voltar ao modo manual (não recomendado):
 
-```
-📋 Lista de usuários que iniciaram o bot:
-
-ID: 6436594324 | Nome: Pantojo | @sem usuario | Msg: /start
-ID: 123456789 | Nome: Rafael | @rafael_barber | Msg: oi
-
---------------------------------------------------
-
-💾 SQL para atualizar no Supabase:
-
-UPDATE barbers SET telegram_chat_id = "6436594324" WHERE name = "Pantojo";
-UPDATE barbers SET telegram_chat_id = "123456789" WHERE name = "Rafael";
+```bash
+curl -s -X POST "https://api.telegram.org/bot8932305524:AAE4CBvVQb-lMG4lnE57WVRKr7Pdwteewds/deleteWebhook"
 ```
