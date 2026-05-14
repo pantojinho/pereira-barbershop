@@ -77,7 +77,8 @@
                     id: b.id,
                     name: b.name,
                     photo_url: b.photo_url,
-                    schedule: daySchedule
+                    schedule: daySchedule,
+                    telegram_chat_id: b.telegram_chat_id
                 };
 
                 var barberIconHtml = b.photo_url
@@ -613,12 +614,58 @@
 
         $("btn-whatsapp-confirm").href = "https://wa.me/5515981311623?text=" + encodeURIComponent(msg);
 
+        // Enviar notificação via Telegram para o barbeiro
+        sendTelegramNotificationToBarber();
+
         $$(".step-content").forEach(function (s) { s.classList.remove("active"); });
         confirmation.classList.add("active");
         $("booking-nav").style.display = "none";
 
         $$(".stepper .step").forEach(function (s) { s.classList.add("completed"); });
         $$(".step-line").forEach(function (l) { l.classList.add("active"); });
+    }
+
+    // Função para enviar notificação via Telegram para o barbeiro
+    function sendTelegramNotificationToBarber() {
+        if (!TELEGRAM_BOT_TOKEN) {
+            console.warn('TELEGRAM_BOT_TOKEN não configurado');
+            return;
+        }
+
+        var barber = BARBERS[booking.barberId];
+        if (!barber || !barber.telegram_chat_id) {
+            console.log('Barbeiro não tem telegram_chat_id configurado');
+            return;
+        }
+
+        var tgMsg = '\u2702 <b>Novo Agendamento pelo Site!</b>\n\n' +
+            '\uD83D\uDC64 <b>Cliente:</b> ' + escapeHTML(booking.clientName) + '\n' +
+            '\uD83D\uDD52 <b>Horário:</b> ' + escapeHTML(booking.time) + '\n' +
+            '\uD83D\uDC87 <b>Serviço:</b> ' + escapeHTML(booking.services.map(function (s) { return s.name; }).join(', ')) + '\n' +
+            '\uD83D\uDCC5 <b>Data:</b> ' + escapeHTML(booking.dateFormatted) + '\n' +
+            '\uD83D\uDCDE <b>Telefone:</b> ' + escapeHTML(booking.clientPhone) + '\n' +
+            (booking.obs ? '\uD83D\uDCAC <b>Obs:</b> ' + escapeHTML(booking.obs) + '\n' : '') +
+            '\n\nPereira\'s Barber Shop';
+
+        fetch('https://api.telegram.org/bot' + TELEGRAM_BOT_TOKEN + '/sendMessage', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                chat_id: barber.telegram_chat_id,
+                text: tgMsg,
+                parse_mode: 'HTML'
+            })
+        }).then(function (response) {
+            return response.json();
+        }).then(function (data) {
+            if (!data.ok) {
+                console.error('Erro ao enviar notificação Telegram:', data);
+            } else {
+                console.log('Notificação Telegram enviada com sucesso');
+            }
+        }).catch(function (e) {
+            console.warn('Telegram send failed:', e);
+        });
     }
 
     $("client-phone").addEventListener("input", function (e) {
