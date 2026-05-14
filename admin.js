@@ -1070,14 +1070,18 @@
             var badgeText = b.active ? 'Ativo' : 'Inativo';
             var scheduleStr = getBarberScheduleSummary(b.id);
             var holidayBadge = '';
+            var phoneHtml = b.phone ? '<div class="card-detail">&#128222; ' + escapeHTML(b.phone) + '</div>' : '';
+            var telegramBadge = b.telegram_chat_id ? ' <span class="badge-featured" style="background:rgba(0,136,204,0.1);color:#0088cc"><i class="fab fa-telegram"></i> Telegram</span>' : '';
             var photoHtml = b.photo_url
                 ? '<div class="card-barber-photo"><img src="' + escapeHTML(b.photo_url) + '" alt="' + escapeHTML(b.name) + '"></div>'
                 : '<div class="card-barber-photo card-barber-photo-placeholder"><i class="fas fa-user"></i></div>';
             return '<div class="manage-card ' + (b.active ? '' : 'inactive') + '">' +
                 '<span class="card-badge ' + badgeClass + '">' + badgeText + '</span>' +
                 holidayBadge +
+                telegramBadge +
                 photoHtml +
                 '<h4>' + escapeHTML(b.name) + '</h4>' +
+                phoneHtml +
                 '<div class="card-detail">&#128336; ' + scheduleStr + '</div>' +
                 '<div class="card-actions">' +
                     '<button class="btn-outline btn-sm" onclick="AdminApp.editBarber(\'' + jsString(b.id) + '\')">Editar</button>' +
@@ -1092,7 +1096,8 @@
         var isEdit = !!barber;
         var title = isEdit ? 'Editar Barbeiro' : 'Novo Barbeiro';
         var name = isEdit ? barber.name : '';
-
+        var phone = isEdit ? (barber.phone || '') : '';
+        var telegramChatId = isEdit ? (barber.telegram_chat_id || '') : '';
         var schedMap = {};
         (schedules || []).forEach(function (s) {
             schedMap[s.day_of_week] = { start: formatTime(s.start_time), end: formatTime(s.end_time) };
@@ -1127,6 +1132,11 @@
         });
 
         var html = '<div class="form-group"><label>Nome</label><input type="text" id="field-name" value="' + escapeHTML(name) + '" required></div>' +
+            '<div class="form-group"><label><i class="fas fa-phone"></i> Telefone</label><input type="tel" id="field-phone" value="' + escapeHTML(phone) + '" placeholder="(15) 99999-9999"></div>' +
+            '<div class="form-group"><label><i class="fab fa-telegram"></i> Telegram Chat ID <span style="font-weight:400;font-size:0.75rem;color:var(--gray-400)">(para notificacoes)</span></label>' +
+                '<input type="text" id="field-telegram" value="' + escapeHTML(telegramChatId) + '" placeholder="Ex: 123456789">' +
+                '<div class="barber-photo-hint" style="margin-top:6px">Para descobrir o Chat ID: o barbeiro envia /start para o bot no Telegram, depois acesse <code style="background:var(--gray-100);padding:1px 4px;border-radius:3px">https://api.telegram.org/bot{TOKEN}/getUpdates</code> e procure por chat.id</div>' +
+            '</div>' +
             '<div class="form-group"><label><i class="fas fa-camera"></i> Foto do Perfil</label>' +
                 '<div class="barber-photo-upload-area">' +
                     '<div class="barber-photo-preview" id="barber-photo-preview"><i class="fas fa-user-circle"></i></div>' +
@@ -1146,7 +1156,9 @@
              if (!newName) { toast('Nome e obrigatorio.', 'error'); return; }
 
              var barberData = {
-                  name: newName
+                  name: newName,
+                  phone: ($('field-phone').value || '').trim() || null,
+                  telegram_chat_id: ($('field-telegram').value || '').trim() || null
               };
 
              var photoFile = $('field-photo') && $('field-photo').files && $('field-photo').files[0] ? $('field-photo').files[0] : null;
@@ -1987,6 +1999,31 @@
     var _realtimeSubscription = null;
     var _pollingInterval = null;
     var _lastPolledCount = -1;
+    var _barberCache = {};
+
+    function sendTelegramNotification(barberId, message) {
+        if (!TELEGRAM_BOT_TOKEN) return;
+        var barber = _barberCache[barberId];
+        if (!barber || !barber.telegram_chat_id) return;
+        fetch('https://api.telegram.org/bot' + TELEGRAM_BOT_TOKEN + '/sendMessage', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                chat_id: barber.telegram_chat_id,
+                text: message,
+                parse_mode: 'HTML'
+            })
+        }).catch(function (e) {
+            console.warn('Telegram send failed:', e);
+        });
+    }
+
+    function cacheBarbersForNotifications() {
+        sb.from('barbers').select('id, name, telegram_chat_id').then(function (result) {
+            _barberCache = {};
+            (result.data || []).forEach(function (b) { _barberCache[b.id] = b; });
+        });
+    }
 
     function playNotificationSound() {
         try {
@@ -2065,6 +2102,15 @@
                     );
                     playNotificationSound();
                     toast('Novo agendamento: ' + clientName + ' às ' + time, 'success');
+
+                    var date = formatDate(a.appointment_date || todayStr());
+                    var tgMsg = '\u2702 <b>Novo Agendamento!</b>\n\n' +
+                        '\uD83D\uDC64 <b>Cliente:</b> ' + escapeHTML(clientName) + '\n' +
+                        '\uD83D\uDD52 <b>Horario:</b> ' + time + '\n' +
+                        '\uD83D\uDC87 <b>Servico:</b> ' + escapeHTML(services) + '\n' +
+                        '\uD83D\uDCC5 <b>Data:</b> ' + date + '\n\n' +
+                        'Pereira\'s Barber Shop';
+                    sendTelegramNotification(a.barber_id, tgMsg);
                 });
 
                 var btn = $('btn-notifications');
@@ -2159,6 +2205,7 @@
             });
             _lastPolledCount = (result.data || []).length;
             updateNotificationBadge();
+            cacheBarbersForNotifications();
             startPolling();
             tryRealtimeSubscription();
         });
