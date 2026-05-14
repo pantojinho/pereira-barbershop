@@ -1,8 +1,8 @@
 :root {
-    --green-primary: #2D4B40;
-    --green-hover: #1a3d32;
-    --green-light: #3a6355;
-    --bg-cream: #F8F5ED;
+    --green-primary: #1a3723;
+    --green-hover: #14302c;
+    --green-light: #2a5540;
+    --bg-cream: #FFF2D2;
     --bg-white: #FFFFFF;
     --bg-dark: #0a0a0a;
     --text-dark: #1a1a1a;
@@ -23,7 +23,7 @@
     --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.1);
     --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.15);
     --shadow-lg: 0 10px 20px rgba(0, 0, 0, 0.2);
-    --shadow-vintage: 0 8px 16px rgba(45, 75, 64, 0.3);
+    --shadow-vintage: 0 8px 16px rgba(26, 55, 35, 0.3);
 }
 
 * {
@@ -34,7 +34,7 @@
 
 body {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-    background: linear-gradient(135deg, #F8F5ED 0%, #EBE5D7 100%);
+    background: linear-gradient(135deg, #FFF2D2 0%, #F5E8C0 100%);
     background-attachment: fixed;
     color: var(--text-dark);
     min-height: 100vh;
@@ -89,6 +89,9 @@ body {
     display: flex;
     justify-content: center;
     align-items: center;
+    background-color: #FFF9EC;
+    border-radius: var(--radius-md);
+    padding: var(--spacing-sm);
 }
 
 .logo-original {
@@ -232,7 +235,7 @@ body {
     align-items: flex-start;
     margin-bottom: var(--spacing-lg);
     padding-bottom: var(--spacing-lg);
-    border-bottom: 1px solid rgba(45, 75, 64, 0.15);
+    border-bottom: 1px solid rgba(26, 55, 35, 0.15);
     transition: transform 0.3s ease;
 }
 
@@ -292,7 +295,7 @@ body {
     gap: var(--spacing-lg);
     background-color: white;
     padding: var(--spacing-lg);
-    border: 2px solid rgba(45, 75, 64, 0.2);
+    border: 2px solid rgba(26, 55, 35, 0.2);
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow-md);
 }
@@ -534,7 +537,7 @@ body {
     align-items: center;
     gap: 6px;
     background: rgba(248, 245, 237, 0.9);
-    color: rgba(45, 75, 64, 0.5);
+    color: rgba(26, 55, 35, 0.5);
     text-decoration: none;
     border-radius: 20px;
     font-size: 0.75rem;
@@ -547,7 +550,7 @@ body {
 }
 
 .admin-link:hover {
-    color: #2D4B40;
+    color: #1a3723;
     background: rgba(248, 245, 237, 1);
 }
 
