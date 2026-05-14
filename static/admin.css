@@ -1,8 +1,8 @@
 :root {
-    --green-dark: #2D4B40;
+    --green-dark: #1a3723;
     --green-darker: #1e352d;
     --green-light: #3a6554;
-    --cream: #F8F5ED;
+    --cream: #FFF2D2;
     --cream-dark: #ede8d8;
     --gold: #FFD700;
     --gold-dark: #d4b200;
@@ -79,7 +79,7 @@ body {
     margin: 0 auto 20px;
     border-radius: 20px;
     overflow: hidden;
-    box-shadow: 0 4px 16px rgba(45,75,64,0.2);
+    box-shadow: 0 4px 16px rgba(26,55,35,0.2);
     background: var(--cream);
     display: flex;
     align-items: center;
@@ -191,7 +191,7 @@ body {
 .form-group textarea:focus {
     outline: none;
     border-color: var(--green-dark);
-    box-shadow: 0 0 0 3px rgba(45,75,64,0.1);
+    box-shadow: 0 0 0 3px rgba(26,55,35,0.1);
 }
 
 .error-msg {
@@ -1241,7 +1241,7 @@ body {
 .schedule-row input[type="time"]:focus {
     outline: none;
     border-color: var(--green-dark);
-    box-shadow: 0 0 0 3px rgba(45,75,64,0.1);
+    box-shadow: 0 0 0 3px rgba(26,55,35,0.1);
 }
 
 .schedule-sep {
@@ -1654,7 +1654,7 @@ body {
     gap: 4px;
     margin-top: 4px;
 }
-.card-stock.stock-ok { background: rgba(45,75,64,0.08); color: #2D4B40; }
+.card-stock.stock-ok { background: rgba(26,55,35,0.08); color: #1a3723; }
 .card-stock.stock-low { background: rgba(255,152,0,0.12); color: #E65100; }
 .card-stock.stock-empty { background: rgba(244,67,54,0.12); color: #C62828; }
 

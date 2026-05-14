@@ -1,9 +1,9 @@
 /* ========== VARIAVEIS GLOBAIS (identidade visual da barbearia) ========== */
 :root {
-    --green-primary: #2D4B40;
+    --green-primary: #1a3723;
     --green-hover: #1a3d32;
     --green-light: #3a6355;
-    --bg-cream: #F8F5ED;
+    --bg-cream: #FFF2D2;
     --bg-white: #FFFFFF;
     --text-dark: #1a1a1a;
     --text-medium: #4a4a4a;
@@ -26,7 +26,7 @@
 
 body {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-    background: linear-gradient(135deg, #F8F5ED 0%, #EBE5D7 100%);
+    background: linear-gradient(135deg, #FFF2D2 0%, #F5E8C0 100%);
     background-attachment: fixed;
     color: var(--text-dark);
     min-height: 100vh;
