@@ -82,7 +82,7 @@ Quando editar HTML/CSS/logo, faca em **AMBOS** os lugares:
 
 ## Identidade Visual
 
-- **Cores primarias:** Verde escuro `#2D4B40`, Creme `#F8F5ED`
+- **Cores primarias:** Verde escuro `#1a3723`, Creme `#FFF2D2`
 - **Cor de destaque:** Dourado `#FFD700`
 - **Fontes:** Playfair Display (titulos), Inter (corpo)
 - **Estilo:** Vintage classico, cartao de visitas elegante
