@@ -1992,18 +1992,26 @@
         try {
             if (!_audioCtx) _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
             var ctx = _audioCtx;
-            var osc = ctx.createOscillator();
-            var gain = ctx.createGain();
-            osc.connect(gain);
-            gain.connect(ctx.destination);
-            osc.type = 'sine';
-            osc.frequency.setValueAtTime(880, ctx.currentTime);
-            osc.frequency.setValueAtTime(1100, ctx.currentTime + 0.1);
-            osc.frequency.setValueAtTime(880, ctx.currentTime + 0.2);
-            gain.gain.setValueAtTime(0.3, ctx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.4);
-            osc.start(ctx.currentTime);
-            osc.stop(ctx.currentTime + 0.4);
+            var notes = [
+                { freq: 880, start: 0, dur: 0.15 },
+                { freq: 0, start: 0.15, dur: 0.05 },
+                { freq: 1100, start: 0.2, dur: 0.15 },
+                { freq: 0, start: 0.35, dur: 0.05 },
+                { freq: 1320, start: 0.4, dur: 0.3 }
+            ];
+            notes.forEach(function (n) {
+                if (n.freq === 0) return;
+                var osc = ctx.createOscillator();
+                var gain = ctx.createGain();
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(n.freq, ctx.currentTime + n.start);
+                gain.gain.setValueAtTime(0.8, ctx.currentTime + n.start);
+                gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + n.start + n.dur);
+                osc.start(ctx.currentTime + n.start);
+                osc.stop(ctx.currentTime + n.start + n.dur + 0.05);
+            });
         } catch (e) {}
     }
 
