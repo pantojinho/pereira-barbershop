@@ -1195,3 +1195,37 @@ ALTER TABLE products ADD COLUMN IF NOT EXISTS stock INTEGER NOT NULL DEFAULT 0;
 - Relatórios (faturamento, clientes recorrentes)
 - Sistema de avaliação
 
+---
+
+### Sessão 25 — 14/05/2026
+**Agente:** opencode (glm-5.1)
+**Tarefas realizadas:**
+- **Correção do favicon que parou de aparecer no navegador:**
+  - Problema: favicon.svg estava acessível no Vercel (200 OK, content-type correto) mas não aparecia na aba do navegador (testado em anônimo e celular)
+  - Causa provável: cache do CDN do Vercel ou cache do navegador servindo versão antiga/stale
+  - Solução: adicionado cache-buster `?v=2` na URL do favicon em todos os HTMLs
+  - Antes: `<link rel="icon" type="image/svg+xml" href="favicon.svg">`
+  - Depois: `<link rel="icon" type="image/svg+xml" href="favicon.svg?v=2">`
+- Sincronizou todos os arquivos com pasta `static/`
+
+**Arquivos modificados:**
+- `index.html` — favicon.svg → favicon.svg?v=2
+- `agendar.html` — favicon.svg → favicon.svg?v=2
+- `admin.html` — favicon.svg → favicon.svg?v=2
+- `produtos.html` — favicon.svg → favicon.svg?v=2
+- `static/index.html` — Sincronizado
+- `static/agendar.html` — Sincronizado
+- `static/admin.html` — Sincronizado
+- `static/produtos.html` — Sincronizado
+
+**Notas importantes:**
+- O favicon.svg em si não foi alterado (mesmo conteúdo SVG válido)
+- O cache-buster força o navegador a baixar uma versão fresca, ignorando cache antigo
+- Se o problema persistir após o deploy, pode ser necessário limpar cache do navegador ou reiniciar o dispositivo
+
+**Pendências:**
+- Implementar notificacoes WhatsApp (Evolution API ou Z-API)
+- Chatbot WhatsApp para agendamento
+- Relatorios (faturamento, clientes recorrentes)
+- Sistema de avaliacao
+
