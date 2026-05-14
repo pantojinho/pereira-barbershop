@@ -92,8 +92,8 @@ async function getTodayAppointments(chatId) {
   const today = new Date().toISOString().split('T')[0];
 
   try {
-    // Buscar agendamentos de hoje para este barbeiro
-    const response = await fetch(`${SUPABASE_URL}/rest/v1/appointments`, {
+    // Buscar agendamentos de hoje para este barbeiro (filtrando diretamente no Supabase)
+    const response = await fetch(`${SUPABASE_URL}/rest/v1/appointments?appointment_date=eq.${today}&select=*`, {
       headers: {
         'apikey': SUPABASE_ANON_KEY,
         'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
@@ -103,10 +103,7 @@ async function getTodayAppointments(chatId) {
 
     const appointments = await response.json();
 
-    // Filtrar por data de hoje
-    const todayAppointments = appointments.filter(a => a.appointment_date === today);
-
-    if (todayAppointments.length === 0) {
+    if (!Array.isArray(appointments) || appointments.length === 0) {
       return `📅 Agendamentos de Hoje (${formatDate(today)})
 
 🎉 Nenhum agendamento para hoje!
@@ -126,7 +123,7 @@ Aproveite o dia! 🌟`;
     // Filtrar agendamentos deste barbeiro (se ele tiver Chat ID configurado)
     const barber = barbers.find(b => b.telegram_chat_id == chatId);
     const myAppointments = barber
-      ? todayAppointments.filter(a => a.barber_id === barber.id)
+      ? appointments.filter(a => a.barber_id === barber.id)
       : [];
 
     let responseText = `📅 Agendamentos de Hoje (${formatDate(today)})\n\n`;
@@ -152,7 +149,7 @@ Aproveite o dia! 🌟`;
     if (!barber) {
       responseText += `👥 <b>TODOS OS AGENDAMENTOS DO DIA:</b>\n\n`;
 
-      todayAppointments.forEach((apt, index) => {
+      appointments.forEach((apt, index) => {
         const time = apt.appointment_time ? apt.appointment_time.substring(0, 5) : '--:--';
         const client = apt.client_name || 'Cliente';
         const barberData = barbers.find(b => b.id === apt.barber_id);
