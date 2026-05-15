@@ -2024,8 +2024,8 @@
             photoInput.addEventListener('change', function () {
                 var file = this.files[0];
                 if (!file) return;
-                if (file.size > 2 * 1024 * 1024) {
-                    toast('Foto muito grande. Use imagens ate 2MB.', 'error');
+                if (file.size > 10 * 1024 * 1024) {
+                    toast('Foto muito grande. Use imagens ate 10MB.', 'error');
                     this.value = '';
                     return;
                 }
