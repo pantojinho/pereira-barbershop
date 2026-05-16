@@ -1938,7 +1938,7 @@
         var price = isEdit ? product.price : '';
 
         var html = '<div class="form-group"><label>Nome</label><input type="text" id="field-name" value="' + escapeHTML(name) + '" required></div>' +
-            '<div class="form-group"><label>Descrição</label><textarea id="field-desc" rows="2" placeholder="Descrição do produto (opcional)">' + escapeHTML(desc) + '</textarea></div>' +
+            '<div class="form-group"><label>Descrição</label><textarea id="field-desc" rows="5" class="desc-textarea" placeholder="Ex:&#10;• Ajuda no fortalecimento do cabelo e barba&#10;• Promove o crescimento saudável dos fios&#10;• Hidratação profunda">' + escapeHTML(desc) + '</textarea><div class="barber-photo-hint">Use • no inicio de cada linha para criar tópicos</div></div>' +
             '<div class="form-group"><label>Preço (R$)</label><input type="number" id="field-price" value="' + price + '" step="0.01" min="0" required></div>' +
             '<div class="form-group"><label><i class="fas fa-cubes"></i> Estoque</label><input type="number" id="field-stock" value="' + (isEdit ? (product.stock || 0) : 0) + '" min="0" step="1" required><div class="barber-photo-hint">Quantidade disponível (0 = esgotado)</div></div>' +
             '<div class="form-group"><label><i class="fas fa-camera"></i> Foto do Produto</label>' +

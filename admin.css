@@ -186,6 +186,12 @@ body {
     -webkit-appearance: none;
 }
 
+.form-group textarea.desc-textarea {
+    resize: vertical;
+    min-height: 120px;
+    line-height: 1.6;
+}
+
 .form-group input:focus,
 .form-group select:focus,
 .form-group textarea:focus {
