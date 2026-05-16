@@ -1289,3 +1289,40 @@ ALTER TABLE products ADD COLUMN IF NOT EXISTS stock INTEGER NOT NULL DEFAULT 0;
 - Background overlay `rgba(0,0,0,0.5)` com backdrop blur
 - Z-index 500 (acima da nav bar z-index 100)
 
+---
+
+### Sessao 11 — 16/05/2026 (01:15)
+**Agente:** Hermes (glm-5.1)
+**Tarefas realizadas:**
+
+**1. Admin — Textarea de descrição maior + bullets**
+- Textarea de descrição do produto: `rows="2"` → `rows="5"`, `min-height: 120px`, resize vertical
+- Placeholder com exemplo de bullets: `• Ajuda no fortalecimento...`
+- Hint: "Use • no inicio de cada linha para criar tópicos"
+- Commit: `fix: product description textarea larger + bullet point hint`
+
+**2. Telegram Bot — Webhook perdido e restaurado**
+- Diagnostico: webhook estava vazio (`"url": ""`), 2 mensagens pendentes
+- Causa: provavelmente apos redeploy da Vercel ou falhas de entrega do Telegram
+- Restaurado manualmente via `setWebhook`
+- Criado watchdog: `~/.hermes/scripts/telegram-webhook-watchdog.sh`
+  - Verifica 1x por dia (9h) se webhook está ativo
+  - Se vazio → reconfigura automaticamente e notifica via Telegram
+  - Silencioso quando tudo OK
+  - Cron job ID: `1b40a8400531`
+
+**3. Landing Page — Contatos clicáveis**
+- Endereço: `<div>` → `<a>` abrindo Google Maps
+- WhatsApp: `<div>` → `<a>` abrindo wa.me/5515981311623
+- Instagram: `<div>` → `<a>` abrindo instagram.com/barbeariapereiravotorantim
+- Horário: permanece como `<div>` (sem link)
+- CSS: `.contact-link` com hover effect (icon scale + darker green)
+- Commit: `fix: make contact items clickable (Instagram, WhatsApp, Maps)`
+
+**Arquivos alterados:**
+- `admin.js` — textarea descrição com rows=5 + placeholder com bullets
+- `admin.css` — `.desc-textarea` (min-height, resize, line-height)
+- `index.html` — 3 `<div>` → `<a>` com links (Maps, WhatsApp, Instagram)
+- `style.css` — `.contact-link` e `.contact-link:hover .contact-icon`
+- `~/.hermes/scripts/telegram-webhook-watchdog.sh` — script novo
+
