@@ -58,6 +58,8 @@ Landing page tipo "cartao de visitas digital" + sistema de agendamento online pa
   supabase-security-hardening.sql ← SQL para RLS + RPC + admin allow-list
   logo.png                      ← Logo oficial (raiz)
   favicon.svg                   ← Favicon (raiz)
+  sitemap.xml                   ← Sitemap XML para SEO (3 paginas: /, /agendar, /produtos)
+  robots.txt                    ← Instrucoes para crawlers (Allow all + Sitemap)
   vercel.json                   ← Config do Vercel (framework: null, outputDirectory: ".")
   server.py                     ← Servidor local FastAPI (desenvolvimento)
   requirements.txt              ← Dependencies Python — GITIGNORED
@@ -1228,4 +1230,62 @@ ALTER TABLE products ADD COLUMN IF NOT EXISTS stock INTEGER NOT NULL DEFAULT 0;
 - Chatbot WhatsApp para agendamento
 - Relatorios (faturamento, clientes recorrentes)
 - Sistema de avaliacao
+
+---
+
+### Sessao 9 — 16/05/2026 (00:03)
+**Agente:** Hermes (glm-5.1)
+**Tarefas realizadas:**
+- Criou `sitemap.xml` com 3 paginas publicas do site:
+  - `/` (landing page) — prioridade 1.0, changefreq weekly
+  - `/agendar.html` — prioridade 0.9, changefreq monthly
+  - `/produtos.html` — prioridade 0.8, changefreq weekly
+- Criou `robots.txt` com `Allow: /` e referencia ao sitemap
+- Verificou que nenhuma pagina possui tag `<meta name="robots" content="noindex">` (tudo limpo)
+- Commit e push: `feat: add sitemap.xml and robots.txt for SEO`
+- Confirmou que ambos os arquivos estao acessiveis no Vercel (200 OK)
+- Gabriel enviou o sitemap no Google Search Console manualmente
+- Gabriel solicitou indexacao manual das URLs via "Inspecionar qualquer URL"
+
+**Estado SEO:**
+- `sitemap.xml` — online, enviado ao Google Search Console (processamento pendente, tipo "Desconhecido" aguardando primeira leitura)
+- `robots.txt` — online, apontando para o sitemap
+- `noindex` — nenhuma pagina com bloqueio
+- Indexacao manual — solicitada para `/`, `/agendar.html`, `/produtos.html`
+- Google costuma indexar em algumas horas ate poucos dias
+
+**Notas:**
+- O tipo "Desconhecido" no Search Console e normal nas primeiras horas, muda pra "Sitemap" apos processamento
+- Nenhuma acao adicional necessaria — so aguardar o Google processar
+
+---
+
+### Sessao 10 — 16/05/2026 (00:30)
+**Agente:** Hermes (glm-5.1)
+**Tarefas realizadas:**
+- Implementou modal de detalhe do produto (bottom sheet) na pagina de produtos
+- Toque no card do produto abre modal com: imagem grande, descricao completa, preco, estoque
+- Botoes +/- dentro do modal sincronizados com o carrinho
+- Botões +/- do card continuam funcionando normalmente (event delegation com `e.target.closest('.product-qty')` check)
+- Fix imagens mobile: trocado `object-fit: cover` por `contain` nos cards em telas ate 480px (sem mais cortes)
+- Foto do card mobile aumentada de 140px para 180px
+- Modal fecha via: botao X, toque no overlay, tecla ESC
+- Aviso de estoque baixo: "Restam N unidades" (<=3), "Esgotado" (0)
+- Commit: `feat: product detail modal (bottom sheet) + fix mobile images`
+
+**Arquivos alterados:**
+- `produtos.html` — adicionado HTML do modal overlay + bottom sheet
+- `produtos.css` — adicionado CSS do modal (~150 linhas) + fix imagens mobile
+- `produtos.js` — adicionado `openProductDetail()`, `closeProductDetail()`, `modalAdd()`, `modalRemove()`, event delegation nos cards (~150 linhas)
+
+**Problema resolvido:**
+- Mobile: nao era possivel ver descricao completa do produto — so aparecia resumo truncado (2 linhas com `-webkit-line-clamp`)
+- Mobile: imagens grandes cortavam nos cards — agora usam `object-fit: contain`
+- Desktop: nao havia como ver detalhes do produto — agora clique no card abre modal
+
+**Design do modal:**
+- Bottom sheet com `border-radius: 24px 24px 0 0` e animacao `slideUp`
+- Foto: 280px (desktop) / 240px (mobile) com `object-fit: contain`
+- Background overlay `rgba(0,0,0,0.5)` com backdrop blur
+- Z-index 500 (acima da nav bar z-index 100)
 
