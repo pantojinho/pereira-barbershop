@@ -240,6 +240,17 @@ body {
     transform: translateX(5px);
 }
 
+.contact-link {
+    text-decoration: none;
+    color: inherit;
+    cursor: pointer;
+}
+
+.contact-link:hover .contact-icon {
+    background-color: var(--green-hover);
+    transform: scale(1.05);
+}
+
 .contact-item:last-child {
     border-bottom: none;
     margin-bottom: 0;
