@@ -159,6 +159,27 @@
         </button>
     </div>
 
+    <!-- ========== MODAL DE DETALHE DO PRODUTO ========== -->
+    <div class="product-modal-overlay" id="product-modal-overlay">
+        <div class="product-modal" id="product-modal">
+            <button class="product-modal-close" id="product-modal-close" aria-label="Fechar">
+                <i class="fas fa-times"></i>
+            </button>
+            <div class="product-modal-photo" id="product-modal-photo"></div>
+            <div class="product-modal-body">
+                <div class="product-modal-name" id="product-modal-name"></div>
+                <div class="product-modal-desc" id="product-modal-desc"></div>
+                <div class="product-modal-price" id="product-modal-price"></div>
+                <div class="product-modal-stock" id="product-modal-stock"></div>
+                <div class="product-modal-actions">
+                    <button class="modal-btn-remove" id="modal-btn-remove"><i class="fas fa-minus"></i></button>
+                    <span class="modal-qty-value" id="modal-qty-value">0</span>
+                    <button class="modal-btn-add" id="modal-btn-add"><i class="fas fa-plus"></i></button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Supabase JS Client + config + logica do carrinho -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
     <script src="supabase-config.js"></script>

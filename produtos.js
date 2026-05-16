@@ -447,6 +447,158 @@
         setTimeout(function () { el.remove(); }, 2500);
     }
 
+    // ========== MODAL DE DETALHE DO PRODUTO ==========
+
+    var currentModalProductId = null;
+
+    /** Abre o modal com detalhes completos do produto */
+    function openProductDetail(id) {
+        var p = PRODUCTS_DB.find(function (pr) { return pr.id === id; });
+        if (!p) return;
+
+        currentModalProductId = id;
+
+        // Foto
+        var photoContainer = $('product-modal-photo');
+        if (p.photo_url) {
+            photoContainer.innerHTML = '<img src="' + escapeHTML(p.photo_url) + '" alt="' + escapeHTML(p.name) + '">';
+        } else {
+            photoContainer.innerHTML = '<div class="product-photo-placeholder"><i class="fas fa-box"></i></div>';
+        }
+
+        // Info
+        $('product-modal-name').textContent = p.name;
+        $('product-modal-desc').textContent = p.description || 'Sem descrição disponível.';
+        $('product-modal-price').textContent = formatPrice(p.price);
+
+        // Estoque
+        var stockEl = $('product-modal-stock');
+        if (p.stock !== undefined && p.stock !== null) {
+            if (p.stock === 0) {
+                stockEl.innerHTML = '<span style="color:#C62828;font-weight:600">Esgotado</span>';
+            } else if (p.stock <= 3) {
+                stockEl.innerHTML = '<span style="color:#E65100;font-weight:600">Restam ' + p.stock + ' unidades</span>';
+            } else {
+                stockEl.textContent = '';
+            }
+        } else {
+            stockEl.textContent = '';
+        }
+
+        // Quantidade no carrinho
+        $('modal-qty-value').textContent = cart[id] || 0;
+        updateModalButtons(id);
+
+        // Mostra modal
+        var overlay = $('product-modal-overlay');
+        overlay.style.display = 'flex';
+        // Force reflow then add class for animation
+        overlay.offsetHeight;
+        overlay.classList.add('open');
+        document.body.style.overflow = 'hidden';
+    }
+
+    /** Fecha o modal de detalhe */
+    function closeProductDetail() {
+        var overlay = $('product-modal-overlay');
+        overlay.classList.remove('open');
+        setTimeout(function () {
+            overlay.style.display = 'none';
+            document.body.style.overflow = '';
+        }, 250);
+        currentModalProductId = null;
+    }
+
+    /** Atualiza estado dos botoes +/- no modal */
+    function updateModalButtons(id) {
+        var p = PRODUCTS_DB.find(function (pr) { return pr.id === id; });
+        var qty = cart[id] || 0;
+        var removeBtn = $('modal-btn-remove');
+        var addBtn = $('modal-btn-add');
+
+        if (qty === 0) {
+            removeBtn.classList.add('disabled');
+        } else {
+            removeBtn.classList.remove('disabled');
+        }
+
+        if (p && p.stock !== undefined && qty >= p.stock) {
+            addBtn.classList.add('disabled');
+        } else {
+            addBtn.classList.remove('disabled');
+        }
+    }
+
+    /** Adiciona via modal */
+    function modalAdd() {
+        if (!currentModalProductId) return;
+        var id = currentModalProductId;
+        var p = PRODUCTS_DB.find(function (pr) { return pr.id === id; });
+        if (p && cart[id] && cart[id] >= (p.stock || Infinity)) {
+            toast('Sem estoque disponível');
+            return;
+        }
+        if (!cart[id]) cart[id] = 0;
+        cart[id]++;
+        $('modal-qty-value').textContent = cart[id];
+        updateModalButtons(id);
+        updateProductCards();
+        updateCartBadge();
+        updateNavButtons();
+    }
+
+    /** Remove via modal */
+    function modalRemove() {
+        if (!currentModalProductId) return;
+        var id = currentModalProductId;
+        if (cart[id] && cart[id] > 0) {
+            cart[id]--;
+            if (cart[id] === 0) delete cart[id];
+        }
+        $('modal-qty-value').textContent = cart[id] || 0;
+        updateModalButtons(id);
+        updateProductCards();
+        updateCartBadge();
+        updateNavButtons();
+    }
+
+    // Event listeners do modal
+    $('product-modal-close').addEventListener('click', function (e) {
+        e.stopPropagation();
+        closeProductDetail();
+    });
+
+    $('product-modal-overlay').addEventListener('click', function (e) {
+        if (e.target === this) closeProductDetail();
+    });
+
+    $('modal-btn-add').addEventListener('click', function (e) {
+        e.stopPropagation();
+        modalAdd();
+    });
+
+    $('modal-btn-remove').addEventListener('click', function (e) {
+        e.stopPropagation();
+        modalRemove();
+    });
+
+    // Fechar modal com ESC
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && currentModalProductId) closeProductDetail();
+    });
+
+    // Delegacao de click nos cards — abre modal ao tocar no card, NAO nos botoes +/-
+    $('products-list').addEventListener('click', function (e) {
+        // Ignora clicks nos botoes de quantidade (eles ja tem onclick proprio)
+        if (e.target.closest('.product-qty')) return;
+
+        var card = e.target.closest('.product-card');
+        if (!card) return;
+
+        var id = card.getAttribute('data-id');
+        if (id) openProductDetail(id);
+    });
+
     // ========== API PUBLICA (ShopApp) — chamada via onclick no HTML ==========
 
     window.ShopApp = {
