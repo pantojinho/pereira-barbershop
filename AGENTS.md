@@ -112,6 +112,7 @@ Quando editar HTML/CSS/logo, faca em **AMBOS** os lugares:
 | CSS 404 no Vercel | Vercel detectava como projeto Python via requirements.txt | Removido requirements.txt do git, arquivos na raiz |
 | Logo 404 no Vercel | Caminho `/static/logo-original.jpg` com framework errado | Logo copiada para raiz como `logo.png`, caminho relativo |
 | Site todo quebrado no Vercel | `@vercel/python` build interceptando requisicoes | Mudado para deploy estatico puro |
+| Speed Insights desktop baixo (score 55) | Logo PNG 1.8MB + scripts render-blocking + fonts blocking | WebP 84KB + defer scripts + async fonts → score 100 |
 
 ---
 
@@ -1325,4 +1326,47 @@ ALTER TABLE products ADD COLUMN IF NOT EXISTS stock INTEGER NOT NULL DEFAULT 0;
 - `index.html` — 3 `<div>` → `<a>` com links (Maps, WhatsApp, Instagram)
 - `style.css` — `.contact-link` e `.contact-link:hover .contact-icon`
 - `~/.hermes/scripts/telegram-webhook-watchdog.sh` — script novo
+
+---
+
+### Sessão 15 — 17/05/2026 (22:30)
+**Agente:** Hermes (glm-5.1 via Z.AI)
+**Tarefas realizadas:**
+
+**Performance Desktop — Speed Insights 55 → 100**
+
+O Speed Insights desktop estava em 55 (FCP 10.12s, LCP 12.8s) enquanto o mobile estava excelente. Diagnóstico e correção completa:
+
+1. **Logo otimizada** — PNG 1.8MB/1024×1024 → WebP 84KB/512×512 + PNG fallback 271KB
+   - `<picture>` com `<source srcset="logo.webp" type="image/webp">` e PNG como fallback
+   - `fetchpriority="high"` + `<link rel="preload" as="image">` no head
+   - `width="512" height="512"` declarados (elimina CLS, reserva espaço)
+
+2. **Render-blocking eliminado**
+   - Google Fonts: `media="print" onload="this.media='all'"` (carrega sem bloquear)
+   - Font Awesome: mesmo padrão async
+   - Supabase JS: `<script defer>` ao invés de sync blocking
+   - `supabase-config.js`: também com `defer`
+
+3. **QR Code otimizado** — `loading="lazy"` + `width/height` declarados (below the fold)
+
+4. **Horário de funcionamento** — valor default hardcoded no HTML ("Seg - Sáb: 09h às 19h") ao invés de "Carregando..." — Supabase atualiza depois se disponível
+
+5. **Git cleanup** — `logo-original.png` e `logo-256.webp` adicionados ao `.gitignore`
+
+**Resultado:**
+- Real Experience Score: **55 → 100** 🟢
+- FCP: **10.12s → 0.84s** 🟢
+- LCP: **12.8s → 1.02s** 🟢
+- INP: **40ms** 🟢
+- CLS: **0.01** 🟢
+- FID: **1ms** 🟢
+
+**Commit:** `d71b728` — `perf: otimizar speed insights desktop — logo WebP + render blocking fixes`
+
+**Arquivos alterados:**
+- `index.html` — picture/WebP, preload, async fonts, defer scripts, lazy QR, hardcoded fallback
+- `logo.png` — 1024×1024 → 512×512 otimizado (271KB, fallback)
+- `logo.webp` — novo arquivo WebP 84KB (primary)
+- `.gitignore` — logo-original.png, logo-256.webp
 
