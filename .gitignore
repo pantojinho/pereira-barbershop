@@ -40,3 +40,5 @@ requirements.txt
 .env.local
 .env.production
 supabase-service-key.txt
+logo-original.png
+logo-256.webp
